@@ -1,0 +1,41 @@
+[package]
+name = "rs-blocks"
+version = "0.1.0"
+authors = ["Lewis Belcher <belcher_lewis@protonmail.com>"]
+edition = "2018"
+description = "Simple i3blocks replacement."
+license = "MIT"
+keywords = ["i3blocks", "monitor"]
+categories = ["command-line-utilities", "filesystem"]
+homepage = "https://gitlab.com/lewisbelcher/rs-blocks"
+respoitory = "https://gitlab.com/lewisbelcher/rs-blocks"
+readme = "README.md"
+
+[dependencies]
+lazy_static = "1.3.0"
+regex = "1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "file_read"
+harness = false
+
+[[bin]]
+name = "battery"
+path = "src/blocks/battery.rs"
+
+[[bin]]
+name = "cpu"
+path = "src/blocks/cpu.rs"
+
+[[bin]]
+name = "memory"
+path = "src/blocks/memory.rs"
+
+[[bin]]
+name = "network"
+path = "src/blocks/network.rs"
