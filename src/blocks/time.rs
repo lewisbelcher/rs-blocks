@@ -7,7 +7,10 @@ use crate::blocks::Block;
 
 const FMT: &str = "%a %d %b <b>%H:%M:%S</b>";
 
-pub fn add_sender(name: &'static str, s: crossbeam_channel::Sender<(&'static str, String)>) {
+pub fn add_sender(
+	name: &'static str,
+	s: crossbeam_channel::Sender<(&'static str, String)>,
+) -> &'static str {
 	let mut block = Block::new(name, true);
 
 	thread::spawn(move || loop {
@@ -15,4 +18,5 @@ pub fn add_sender(name: &'static str, s: crossbeam_channel::Sender<(&'static str
 		s.send((name, block.to_string())).unwrap();
 		thread::sleep(Duration::from_secs(1));
 	});
+	name
 }

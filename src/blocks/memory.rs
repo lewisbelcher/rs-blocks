@@ -1,5 +1,5 @@
 use crate::blocks::Block;
-use crate::{ema, file};
+use crate::{ema, utils};
 use regex::Regex;
 use std::thread;
 
@@ -29,8 +29,11 @@ fn get_mem_percentage(mem: MemStats) -> f32 {
 	1.0 - mem.free as f32 / mem.total as f32
 }
 
-pub fn add_sender(name: &'static str, s: crossbeam_channel::Sender<(&'static str, String)>) {
-	let monitor = file::MonitorFile::new(MEMPATH, PERIOD);
+pub fn add_sender(
+	name: &'static str,
+	s: crossbeam_channel::Sender<(&'static str, String)>,
+) -> &'static str {
+	let monitor = utils::monitor_file(MEMPATH.to_string(), PERIOD);
 	let mut mem = ema::Ema::new(ALPHA);
 	let mut block = Block::new(name, true);
 
@@ -41,6 +44,7 @@ pub fn add_sender(name: &'static str, s: crossbeam_channel::Sender<(&'static str
 			s.send((name, block.to_string())).unwrap();
 		}
 	});
+	name
 }
 
 #[cfg(test)]

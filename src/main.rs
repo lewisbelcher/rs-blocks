@@ -1,23 +1,28 @@
 use std::collections::HashMap;
 
-use rs_blocks::blocks::{cpu, memory, network, time, battery};
+use rs_blocks::blocks::{battery, brightness, cpu, memory, network, time, volume};
 
 const BATTERY: &str = "battery";
+const BRIGHTNESS: &str = "brightness";
 const CPU: &str = "cpu";
 const MEMORY: &str = "memory";
 const NETWORK: &str = "network";
 const TIME: &str = "time";
+const VOLUME: &str = "volume";
 
 fn main() {
 	let (s, r) = crossbeam_channel::unbounded();
 	let mut blocks = HashMap::new();
 
-	battery::add_sender(BATTERY, s.clone());
-	cpu::add_sender(CPU, s.clone());
-	memory::add_sender(MEMORY, s.clone());
-	network::add_sender(NETWORK, s.clone());
-	time::add_sender(TIME, s.clone());
-	let order = [NETWORK, MEMORY, CPU, BATTERY, TIME];
+	let order = [
+		brightness::add_sender(BRIGHTNESS, s.clone()),
+		volume::add_sender(VOLUME, s.clone()),
+		network::add_sender(NETWORK, s.clone()),
+		memory::add_sender(MEMORY, s.clone()),
+		cpu::add_sender(CPU, s.clone()),
+		battery::add_sender(BATTERY, s.clone()),
+		time::add_sender(TIME, s.clone()),
+	];
 
 	println!("{{\"version\":1,\"click_events\":true}}");
 	println!("[");
@@ -30,7 +35,7 @@ fn main() {
 }
 
 /// Print all blocks in a JSON array.
-fn print_blocks(blocks: &HashMap<&str, String>, order: &[&str; 5]) {
+fn print_blocks(blocks: &HashMap<&str, String>, order: &[&str]) {
 	let mut first = true;
 	print!("[");
 	for name in order.iter() {

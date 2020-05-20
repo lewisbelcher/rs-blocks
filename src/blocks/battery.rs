@@ -1,5 +1,5 @@
 use crate::blocks::Block;
-use crate::{ema, file, utils};
+use crate::{ema, utils};
 use std::fs;
 use std::sync::mpsc;
 use std::thread;
@@ -12,7 +12,7 @@ const PERIOD: u64 = 500; // Monitor interval in ms
 
 fn get_max_capacity() -> f32 {
 	let path = format!("{}/{}", PATH, "charge_full");
-	utils::str_to_f32(&fs::read_to_string(&path).unwrap())
+	utils::str_to_f32(&fs::read_to_string(&path).unwrap()).unwrap()
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -43,7 +43,8 @@ fn str_to_charge(s: &str) -> Message {
 	Message::Charge(s.trim().parse().unwrap())
 }
 
-fn looper<F: 'static>(tx: mpsc::Sender<Message>, mut f: file::MonitorFile, content_fn: F)
+// TODO: Update this to be compatible with `Monitor`.
+fn looper<F: 'static>(tx: mpsc::Sender<Message>, mut f: utils::MonitorFile, content_fn: F)
 where
 	F: Fn(&str) -> Message + Send,
 {
@@ -102,8 +103,8 @@ fn calc_remain(gap: f32, prev: f32, rate: f32) -> f32 {
 }
 
 fn initialise(tx: mpsc::Sender<Message>) -> (f32, Status) {
-	let mut charge_file = file::MonitorFile::new(&format!("{}/{}", PATH, "charge_now"), PERIOD);
-	let mut status_file = file::MonitorFile::new(&format!("{}/{}", PATH, "status"), PERIOD);
+	let mut charge_file = utils::MonitorFile::new(&format!("{}/{}", PATH, "charge_now"), PERIOD);
+	let mut status_file = utils::MonitorFile::new(&format!("{}/{}", PATH, "status"), PERIOD);
 
 	let current_charge = match str_to_charge(&charge_file.read()) {
 		Message::Charge(charge) => charge,
@@ -121,7 +122,10 @@ fn initialise(tx: mpsc::Sender<Message>) -> (f32, Status) {
 	(current_charge, current_status)
 }
 
-pub fn add_sender(name: &'static str, s: crossbeam_channel::Sender<(&'static str, String)>) {
+pub fn add_sender(
+	name: &'static str,
+	s: crossbeam_channel::Sender<(&'static str, String)>,
+) -> &'static str {
 	let max = get_max_capacity();
 	let (tx, rx): (mpsc::Sender<Message>, mpsc::Receiver<Message>) = mpsc::channel();
 	let mut sremain = "...".to_string();
@@ -171,9 +175,10 @@ pub fn add_sender(name: &'static str, s: crossbeam_channel::Sender<(&'static str
 		}
 		let symbol = get_symbol(current_status, percent);
 
-		block.full_text = Some(format!("{} {:.0}% ({})", symbol, percent * 100.0, sremain));
+		block.full_text = Some(format!("{}{:.0}% ({})", symbol, percent * 100.0, sremain));
 		s.send((name, block.to_string())).unwrap();
 	});
+	name
 }
 
 #[cfg(test)]

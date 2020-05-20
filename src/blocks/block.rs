@@ -31,7 +31,7 @@ impl Block {
 				None
 			},
 			separator: None,
-			separator_block_width: Some(3),
+			separator_block_width: Some(18),
 		}
 	}
 
@@ -51,6 +51,6 @@ mod test {
 
 	#[test]
 	fn create_json() {
-		serde_json::to_string(&Block::new()).unwrap();
+		Block::new("hi", true).to_string();
 	}
 }

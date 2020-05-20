@@ -1,5 +1,5 @@
 use crate::blocks::Block;
-use crate::{file, utils};
+use crate::utils;
 use std::thread;
 
 const PERIOD: u64 = 1000; // Monitor interval in ms
@@ -34,9 +34,12 @@ impl Speed {
 	}
 }
 
-pub fn add_sender(name: &'static str, s: crossbeam_channel::Sender<(&'static str, String)>) {
-	let rx_file = file::MonitorFile::new(&get_network_file("rx"), PERIOD);
-	let mut tx_file = file::MonitorFile::new(&get_network_file("tx"), PERIOD);
+pub fn add_sender(
+	name: &'static str,
+	s: crossbeam_channel::Sender<(&'static str, String)>,
+) -> &'static str {
+	let rx_file = utils::monitor_file(get_network_file("rx"), PERIOD);
+	let mut tx_file = utils::monitor_file(get_network_file("tx"), PERIOD);
 
 	let coef = 1.0 / (PERIOD as f32 * 1.024); // Report in kB
 	let mut rx = Speed::new(coef);
@@ -46,8 +49,8 @@ pub fn add_sender(name: &'static str, s: crossbeam_channel::Sender<(&'static str
 
 	thread::spawn(move || {
 		for rx_ in rx_file {
-			rx.push(utils::str_to_f32(&rx_));
-			tx.push(utils::str_to_f32(&tx_file.read()));
+			rx.push(utils::str_to_f32(&rx_).unwrap());
+			tx.push(utils::str_to_f32(&tx_file.read()).unwrap());
 
 			if first {
 				first = false;
@@ -61,4 +64,5 @@ pub fn add_sender(name: &'static str, s: crossbeam_channel::Sender<(&'static str
 			}
 		}
 	});
+	name
 }

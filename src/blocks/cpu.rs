@@ -1,5 +1,5 @@
 use crate::blocks::Block;
-use crate::{ema, file};
+use crate::{ema, utils};
 use regex::Regex;
 use std::thread;
 
@@ -38,8 +38,11 @@ fn match_proc(s: &str) -> regex::Captures {
 	RE.captures(s).unwrap()
 }
 
-pub fn add_sender(name: &'static str, s: crossbeam_channel::Sender<(&'static str, String)>) {
-	let monitor = file::MonitorFile::new(PATH, PERIOD);
+pub fn add_sender(
+	name: &'static str,
+	s: crossbeam_channel::Sender<(&'static str, String)>,
+) -> &'static str {
+	let monitor = utils::monitor_file(PATH.to_string(), PERIOD);
 	let mut perc = ema::Ema::new(ALPHA);
 	let mut cpu = Cpu {
 		idle: 0.0,
@@ -58,4 +61,5 @@ pub fn add_sender(name: &'static str, s: crossbeam_channel::Sender<(&'static str
 			cpu = current_cpu;
 		}
 	});
+	name
 }
