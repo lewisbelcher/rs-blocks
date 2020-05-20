@@ -1,38 +1,45 @@
-use serde::{Deserialize, Serialize};
-use serde_json;
+use serde::Serialize;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 pub struct Block {
-	#[serde(default = "gghh")]
-	background: Option<String>,
-	#[serde(skip_serializing_if = "Option::is_none")]
-	color: Option<String>,
-	#[serde(skip_serializing_if = "Option::is_none")]
-	full_text: Option<String>,
-	#[serde(skip_serializing_if = "Option::is_none")]
-	markup: Option<String>,
-	#[serde(skip_serializing_if = "Option::is_none")]
-	name: Option<String>,
-	#[serde(skip_serializing_if = "Option::is_none")]
-	separator: Option<bool>,
-	#[serde(skip_serializing_if = "Option::is_none")]
-	separator_block_width: Option<usize>,
-}
+	pub name: &'static str,
 
-fn gghh() -> Option<String> {
-	Some("a".to_string())
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub background: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub color: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub full_text: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub markup: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub separator: Option<bool>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub separator_block_width: Option<usize>,
 }
 
 impl Block {
-	pub fn new() -> Block {
+	pub fn new(name: &'static str, pango: bool) -> Block {
 		Block {
+			name,
 			background: None,
 			color: None,
 			full_text: None,
-			markup: None,
-			name: None,
+			markup: if pango {
+				Some("pango".to_string())
+			} else {
+				None
+			},
 			separator: None,
-			separator_block_width: None,
+			separator_block_width: Some(3),
+		}
+	}
+
+	pub fn to_string(&self) -> String {
+		if let Ok(s) = serde_json::to_string(self) {
+			s
+		} else {
+			format!("Error in '{}'", self.name)
 		}
 	}
 }
@@ -40,10 +47,10 @@ impl Block {
 #[cfg(test)]
 mod test {
 	use super::*;
+	use serde_json;
 
 	#[test]
 	fn create_json() {
-		let x = serde_json::to_string(&Block::new()).unwrap();
-		println!("{}", x);
+		serde_json::to_string(&Block::new()).unwrap();
 	}
 }

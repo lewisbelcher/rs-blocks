@@ -1,4 +1,6 @@
-use rs_blocks::{self, file};
+use crate::blocks::Block;
+use crate::{file, utils};
+use std::thread;
 
 const PERIOD: u64 = 1000; // Monitor interval in ms
 const DEVICE: &str = "wlp2s0";
@@ -32,7 +34,7 @@ impl Speed {
 	}
 }
 
-fn main() {
+pub fn add_sender(name: &'static str, s: crossbeam_channel::Sender<(&'static str, String)>) {
 	let rx_file = file::MonitorFile::new(&get_network_file("rx"), PERIOD);
 	let mut tx_file = file::MonitorFile::new(&get_network_file("tx"), PERIOD);
 
@@ -40,22 +42,23 @@ fn main() {
 	let mut rx = Speed::new(coef);
 	let mut tx = Speed::new(coef);
 	let mut first = true;
+	let mut block = Block::new(name, true);
 
-	for rx_ in rx_file {
-		rx.push(rs_blocks::str_to_f32(&rx_));
-		tx.push(rs_blocks::str_to_f32(&tx_file.read()));
+	thread::spawn(move || {
+		for rx_ in rx_file {
+			rx.push(utils::str_to_f32(&rx_));
+			tx.push(utils::str_to_f32(&tx_file.read()));
 
-		if first {
-			first = false;
-		} else {
-			print!(
-				"<span foreground='#ccffcc'>\u{f0ab} {:.1}</span> ",
-				rx.calc_speed()
-			);
-			println!(
-				"<span foreground='#ffcccc'>\u{f0aa} {:.1}</span>",
-				tx.calc_speed()
-			);
+			if first {
+				first = false;
+			} else {
+				block.full_text = Some(format!(
+					"<span foreground='#ccffcc'>\u{f0ab} {:.1}</span> <span foreground='#ffcccc'>\u{f0aa} {:.1}</span>",
+					rx.calc_speed(),
+					tx.calc_speed()
+				));
+				s.send((name, block.to_string())).unwrap();
+			}
 		}
-	}
+	});
 }

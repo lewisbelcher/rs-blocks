@@ -1,4 +1,5 @@
 use std::fs::File;
+use std::process::{self, Command};
 use std::io::{self, Read, Seek, SeekFrom};
 use std::thread;
 use std::time::Duration;
@@ -38,8 +39,12 @@ impl MonitorFile {
 	/// Read contents of file immediately.
 	pub fn read(&mut self) -> String {
 		self.buf.truncate(0);
-		read_to_string(&mut self.file, &mut self.buf).unwrap();
+		self._read();
 		self.buf.clone()
+	}
+
+	fn _read(&mut self) {
+		read_to_string(&mut self.file, &mut self.buf).unwrap();
 	}
 }
 
@@ -55,3 +60,20 @@ impl Iterator for MonitorFile {
 		Some(self.read())
 	}
 }
+
+// pub struct MonitorCommand {
+// 	cmd: String,
+// 	period: Duration,
+// 	buf: String,
+// 	first: bool,
+// }
+// 
+// impl Reader for MonitorCommand {
+// 	fn _read(&mut self) -> String {
+// 		if let Ok(output) = Command::new(&self.cmd).output() {
+// 			output.stdout
+// 		} else {
+// 			format!("Command failed: '{}'", &self.cmd)
+// 		}
+// 	}
+// }

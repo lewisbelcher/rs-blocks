@@ -1,8 +1,7 @@
-#[macro_use]
-extern crate lazy_static;
-
+use crate::blocks::Block;
+use crate::{ema, file};
 use regex::Regex;
-use rs_blocks::{file, ema};
+use std::thread;
 
 const ALPHA: f32 = 0.5;
 const PERIOD: u64 = 1000; // Monitor interval in ms
@@ -30,30 +29,24 @@ fn get_mem_percentage(mem: MemStats) -> f32 {
 	1.0 - mem.free as f32 / mem.total as f32
 }
 
-fn main() {
+pub fn add_sender(name: &'static str, s: crossbeam_channel::Sender<(&'static str, String)>) {
 	let monitor = file::MonitorFile::new(MEMPATH, PERIOD);
 	let mut mem = ema::Ema::new(ALPHA);
+	let mut block = Block::new(name, true);
 
-	for c in monitor {
-		let perc = get_mem_percentage(match_mem_stats(&c));
-		println!(" {:.1}%", mem.push(perc) * 100.0);
-	}
+	thread::spawn(move || {
+		for c in monitor {
+			let perc = get_mem_percentage(match_mem_stats(&c));
+			block.full_text = Some(format!(" {:.1}%", mem.push(perc) * 100.0));
+			s.send((name, block.to_string())).unwrap();
+		}
+	});
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
 	const MEMFILE: &str = "MemTotal:  16134372 kB\nMemFree:  2757408 kB\n";
-
-	// An old implementation for benchmarking that does not use lazy static
-	fn match_mem_stats_old(s: &str) -> MemStats {
-		let re = Regex::new(PATTERN).unwrap();
-		let caps = re.captures(s).unwrap();
-		MemStats {
-			total: caps.get(1).unwrap().as_str().parse().unwrap(),
-			free: caps.get(2).unwrap().as_str().parse().unwrap(),
-		}
-	}
 
 	#[test]
 	fn regex_matches() {
@@ -66,14 +59,4 @@ mod tests {
 			}
 		);
 	}
-
-// 	#[bench]
-// 	fn bench_match_mem_stats(b: &mut Bencher) {
-// 		b.iter(|| match_mem_stats(&MEMFILE));
-// 	}
-// 
-// 	#[bench]
-// 	fn bench_match_mem_stats_old(b: &mut Bencher) {
-// 		b.iter(|| match_mem_stats_old(&MEMFILE));
-// 	}
 }

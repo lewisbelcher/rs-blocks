@@ -1,8 +1,7 @@
-#[macro_use]
-extern crate lazy_static;
-
+use crate::blocks::Block;
+use crate::{ema, file};
 use regex::Regex;
-use rs_blocks::{self, ema, file};
+use std::thread;
 
 const ALPHA: f32 = 0.7;
 const PERIOD: u64 = 1000; // Monitor interval in ms
@@ -39,17 +38,24 @@ fn match_proc(s: &str) -> regex::Captures {
 	RE.captures(s).unwrap()
 }
 
-fn main() {
+pub fn add_sender(name: &'static str, s: crossbeam_channel::Sender<(&'static str, String)>) {
 	let monitor = file::MonitorFile::new(PATH, PERIOD);
 	let mut perc = ema::Ema::new(ALPHA);
 	let mut cpu = Cpu {
 		idle: 0.0,
 		total: 0.0,
 	};
+	let mut block = Block::new(name, true);
 
-	for c in monitor {
-		let current_cpu = calc_cpu(match_proc(&c));
-		println!(" {:.1}%", perc.push(calc_dcpu(&current_cpu, &cpu)));
-		cpu = current_cpu;
-	}
+	thread::spawn(move || {
+		for c in monitor {
+			let current_cpu = calc_cpu(match_proc(&c));
+			block.full_text = Some(format!(
+				" {:.1}%",
+				perc.push(calc_dcpu(&current_cpu, &cpu))
+			));
+			s.send((name, block.to_string())).unwrap();
+			cpu = current_cpu;
+		}
+	});
 }

@@ -1,4 +1,5 @@
-use rs_blocks::{self, ema, file};
+use crate::blocks::Block;
+use crate::{ema, file, utils};
 use std::fs;
 use std::sync::mpsc;
 use std::thread;
@@ -11,7 +12,7 @@ const PERIOD: u64 = 500; // Monitor interval in ms
 
 fn get_max_capacity() -> f32 {
 	let path = format!("{}/{}", PATH, "charge_full");
-	rs_blocks::str_to_f32(&fs::read_to_string(&path).unwrap())
+	utils::str_to_f32(&fs::read_to_string(&path).unwrap())
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -120,7 +121,7 @@ fn initialise(tx: mpsc::Sender<Message>) -> (f32, Status) {
 	(current_charge, current_status)
 }
 
-fn main() {
+pub fn add_sender(name: &'static str, s: crossbeam_channel::Sender<(&'static str, String)>) {
 	let max = get_max_capacity();
 	let (tx, rx): (mpsc::Sender<Message>, mpsc::Receiver<Message>) = mpsc::channel();
 	let mut sremain = "...".to_string();
@@ -129,8 +130,9 @@ fn main() {
 	let (mut current_charge, mut current_status) = initialise(tx);
 	let mut then = Instant::now();
 	let mut percent = current_charge / max;
+	let mut block = Block::new(name, true);
 
-	loop {
+	thread::spawn(move || loop {
 		let message = rx.recv().unwrap();
 		let now = Instant::now();
 
@@ -168,8 +170,10 @@ fn main() {
 			sremain = "Full".to_string();
 		}
 		let symbol = get_symbol(current_status, percent);
-		println!("{} {:.0}% ({})", symbol, percent * 100.0, sremain);
-	}
+
+		block.full_text = Some(format!("{} {:.0}% ({})", symbol, percent * 100.0, sremain));
+		s.send((name, block.to_string())).unwrap();
+	});
 }
 
 #[cfg(test)]
