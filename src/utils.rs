@@ -97,6 +97,19 @@ pub fn monitor_command(
 	)
 }
 
+pub fn wait_for_signal(signal: i32, timeout: u64) -> crossbeam_channel::Receiver<()> {
+	let (s, r) = crossbeam_channel::unbounded();
+	let s2 = s.clone();
+	unsafe {
+		signal_hook::register(signal, move || s2.send(()).unwrap()).unwrap();
+	}
+	thread::spawn(move || {
+		thread::sleep(Duration::from_millis(timeout));
+		s.send(()).unwrap();
+	});
+	r
+}
+
 /// `MonitorFile` is a struct which can be created to periodically read the
 /// contents of a file when iterated.
 pub struct MonitorFile {
