@@ -2,8 +2,6 @@ use crate::blocks::Block;
 use crate::utils;
 use std::thread;
 
-// TODO: Account for which device is being used
-
 pub fn add_sender(
 	name: &'static str,
 	s: crossbeam_channel::Sender<(&'static str, String)>,

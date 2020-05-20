@@ -43,7 +43,6 @@ fn str_to_charge(s: &str) -> Message {
 	Message::Charge(s.trim().parse().unwrap())
 }
 
-// TODO: Update this to be compatible with `Monitor`.
 fn looper<F: 'static>(tx: mpsc::Sender<Message>, mut f: utils::MonitorFile, content_fn: F)
 where
 	F: Fn(&str) -> Message + Send,
