@@ -103,7 +103,7 @@ pub fn wait_for_signal(signal: i32, timeout: u64) -> crossbeam_channel::Receiver
 	unsafe {
 		signal_hook::register(signal, move || s2.send(()).unwrap()).unwrap();
 	}
-	thread::spawn(move || {
+	thread::spawn(move || loop {
 		thread::sleep(Duration::from_millis(timeout));
 		s.send(()).unwrap();
 	});
