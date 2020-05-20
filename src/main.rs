@@ -1,6 +1,5 @@
-use std::collections::HashMap;
-
 use rs_blocks::blocks::{battery, brightness, cpu, memory, network, time, volume};
+use std::collections::HashMap;
 
 const BATTERY: &str = "battery";
 const BRIGHTNESS: &str = "brightness";

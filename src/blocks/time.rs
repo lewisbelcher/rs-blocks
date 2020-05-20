@@ -1,9 +1,7 @@
+use crate::blocks::Block;
 use chrono::prelude::*;
-
 use std::thread;
 use std::time::Duration;
-
-use crate::blocks::Block;
 
 const FMT: &str = "%a %d %b <b>%H:%M:%S</b>";
 
