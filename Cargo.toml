@@ -8,7 +8,6 @@ license = "MIT"
 keywords = ["i3blocks", "monitor"]
 categories = ["command-line-utilities", "filesystem"]
 homepage = "https://gitlab.com/lewisbelcher/rs-blocks"
-respoitory = "https://gitlab.com/lewisbelcher/rs-blocks"
 readme = "README.md"
 
 [dependencies]
