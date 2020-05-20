@@ -134,6 +134,12 @@ pub fn add_sender(
 	let mut then = Instant::now();
 	let mut percent = current_charge / max;
 	let mut block = Block::new(name, true);
+	let mut symbol = get_symbol(current_status, percent);
+
+	if current_status == Status::Full {
+		block.full_text = Some(create_full_text(&symbol, percent, "Full"));
+		s.send((name, block.to_string())).unwrap();
+	}
 
 	thread::spawn(move || loop {
 		let message = rx.recv().unwrap();
@@ -172,12 +178,16 @@ pub fn add_sender(
 		if current_status == Status::Full {
 			sremain = "Full".to_string();
 		}
-		let symbol = get_symbol(current_status, percent);
+		symbol = get_symbol(current_status, percent);
 
-		block.full_text = Some(format!("{}{:.0}% ({})", symbol, percent * 100.0, sremain));
+		block.full_text = Some(create_full_text(&symbol, percent, &sremain));
 		s.send((name, block.to_string())).unwrap();
 	});
 	name
+}
+
+fn create_full_text(symbol: &str, percent: f32, remaining: &str) -> String {
+	format!("{}{:.0}% ({})", symbol, percent * 100.0, remaining)
 }
 
 #[cfg(test)]
