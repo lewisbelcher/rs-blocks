@@ -7,7 +7,6 @@ use std::time::Instant;
 
 const PATH: &str = "/sys/class/power_supply/BAT0";
 const ALPHA: f32 = 0.8; // Exponential moving average coefficient
-const MINALPHA: f32 = 0.2; // Minimum exponential moving average coefficient
 const PERIOD: u64 = 500; // Monitor interval in ms
 
 fn get_max_capacity() -> f32 {
@@ -93,19 +92,8 @@ fn minutes_to_string(remain: f32) -> String {
 	format!("{:.0}h{:02.0}m", hrs.floor(), mins)
 }
 
-// Calculate the time remaining to fill `gap`, given `rate`. We use a rate
-// adjusted exponential moving average, based on the time since the last
-// change in status.
-// fn calc_remain(gap:f32, prev:f32, rate:f32, lastStatusChange: u64) ->f32 {
-// 	_alpha := math.Max(math.Pow(ALPHA, Float64(lastStatusChange)), MINALPHA);
-// 	return _alpha*gap/rate + (1-_alpha)*prev
-// }
-
-/// Calculate the time remaining to fill `gap`, given `rate`.
-fn calc_remain(gap: f32, prev: f32, rate: f32) -> f32 {
-	return ALPHA * gap / rate + (1.0 - ALPHA) * prev;
-}
-
+/// Start watching the appropriate files for changes and return their current
+/// contents.
 fn initialise(tx: mpsc::Sender<Message>) -> (f32, Status) {
 	let mut charge_file = utils::monitor_file(format!("{}/{}", PATH, "charge_now"), PERIOD);
 	let mut status_file = utils::monitor_file(format!("{}/{}", PATH, "status"), PERIOD);
