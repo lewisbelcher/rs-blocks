@@ -97,6 +97,8 @@ pub fn monitor_command(
 	)
 }
 
+/// Wait for a signal to occur with a given timeout. Sends a message through
+/// the returned receiver when the signal/timeout occurs.
 pub fn wait_for_signal(signal: i32, timeout: u64) -> crossbeam_channel::Receiver<()> {
 	let (s, r) = crossbeam_channel::unbounded();
 	let s2 = s.clone();
@@ -108,46 +110,4 @@ pub fn wait_for_signal(signal: i32, timeout: u64) -> crossbeam_channel::Receiver
 		s.send(()).unwrap();
 	});
 	r
-}
-
-/// `MonitorFile` is a struct which can be created to periodically read the
-/// contents of a file when iterated.
-pub struct MonitorFile {
-	file: File,
-	period: Duration,
-	buf: String,
-	first: bool,
-}
-
-impl MonitorFile {
-	/// Create a new `MonitorFile` instance.
-	pub fn new(path: &str, period: u64) -> MonitorFile {
-		let file = File::open(path).unwrap();
-		MonitorFile {
-			file,
-			period: Duration::from_millis(period),
-			buf: String::new(),
-			first: true,
-		}
-	}
-
-	/// Read contents of file immediately.
-	pub fn read(&mut self) -> String {
-		self.buf.truncate(0);
-		read_to_string(&mut self.file, &mut self.buf).unwrap();
-		self.buf.clone()
-	}
-}
-
-impl Iterator for MonitorFile {
-	type Item = String;
-
-	fn next(&mut self) -> Option<Self::Item> {
-		if self.first {
-			self.first = false;
-		} else {
-			thread::sleep(self.period);
-		}
-		Some(self.read())
-	}
 }

@@ -29,6 +29,7 @@ enum Message {
 	Status(Status),
 }
 
+/// Convert a string to a status.
 fn str_to_status(s: &str) -> Message {
 	match s.trim() {
 		"Charging" => Message::Status(Status::Charging),
@@ -39,13 +40,17 @@ fn str_to_status(s: &str) -> Message {
 	}
 }
 
+/// Convert a string to a charge enum.
 fn str_to_charge(s: &str) -> Message {
 	Message::Charge(s.trim().parse().unwrap())
 }
 
-fn looper<F: 'static>(tx: mpsc::Sender<Message>, mut f: utils::MonitorFile, content_fn: F)
+/// Continuously monitor `f` for changes, when a change occurs pipe its contents
+/// through `content_fn` and send the results over the sender `tx`.
+fn looper<F, T>(tx: mpsc::Sender<Message>, mut f: utils::Monitor<T>, content_fn: F)
 where
-	F: Fn(&str) -> Message + Send,
+	F: 'static + Fn(&str) -> Message + Send,
+	T: 'static + FnMut() -> String + Send,
 {
 	thread::spawn(move || {
 		let mut prev = f.read();
@@ -102,8 +107,8 @@ fn calc_remain(gap: f32, prev: f32, rate: f32) -> f32 {
 }
 
 fn initialise(tx: mpsc::Sender<Message>) -> (f32, Status) {
-	let mut charge_file = utils::MonitorFile::new(&format!("{}/{}", PATH, "charge_now"), PERIOD);
-	let mut status_file = utils::MonitorFile::new(&format!("{}/{}", PATH, "status"), PERIOD);
+	let mut charge_file = utils::monitor_file(format!("{}/{}", PATH, "charge_now"), PERIOD);
+	let mut status_file = utils::monitor_file(format!("{}/{}", PATH, "status"), PERIOD);
 
 	let current_charge = match str_to_charge(&charge_file.read()) {
 		Message::Charge(charge) => charge,
