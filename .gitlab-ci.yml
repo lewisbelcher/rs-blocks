@@ -1,0 +1,19 @@
+image: rust
+
+stages:
+  - test
+  - publish
+
+test:
+  stage: test
+  before_script:
+    - cargo install -f cargo-tarpaulin
+  script: cargo tarpaulin
+
+publish:
+  stage: publish
+  before_script:
+    - cargo login $CARGO_TOKEN
+  script: cargo publish
+  only:
+    - tags
