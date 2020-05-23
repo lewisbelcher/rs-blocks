@@ -73,17 +73,26 @@ fn wrap_in_color(s: &str, percent: f32) -> String {
 }
 
 /// Given a percentage of charge, return an appropriate battery symbol.
-fn get_discharge_symbol(percent: f32) -> String {
-	let n = ((1.0 - percent) / 0.2).floor() as u8;
-	String::from_utf8(vec![239, 137, 128 + n]).unwrap()
+fn get_discharge_symbol(percent: f32) -> &'static str {
+	if percent > 0.90 {
+		" "
+	} else if percent > 0.60 {
+		" "
+	} else if percent > 0.40 {
+		" "
+	} else if percent > 0.10 {
+		" "
+	} else {
+		" "
+	}
 }
 
 fn get_symbol(status: Status, percent: f32) -> String {
 	let s = match status {
 		Status::Discharging => get_discharge_symbol(percent),
-		_ => " ".to_string(),
+		_ => " ",
 	};
-	wrap_in_color(&s, percent)
+	wrap_in_color(s, percent)
 }
 
 /// Convert a float of minutes into a string of hours and minutes.

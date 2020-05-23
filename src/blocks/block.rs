@@ -1,8 +1,11 @@
 use serde::Serialize;
 
+/// The type sent by a block to the main thread.
+pub type Message = (String, String);
+
 #[derive(Serialize)]
 pub struct Block {
-	pub name: &'static str,
+	pub name: String,
 
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub background: Option<String>,
@@ -19,7 +22,7 @@ pub struct Block {
 }
 
 impl Block {
-	pub fn new(name: &'static str, pango: bool) -> Block {
+	pub fn new(name: String, pango: bool) -> Block {
 		Block {
 			name,
 			background: None,
@@ -42,6 +45,23 @@ impl Block {
 			format!("Error in '{}'", self.name)
 		}
 	}
+}
+
+/// Configure trait for a block sender.
+///
+/// Configuration is in toml format sent as a string so that each block
+/// sender can deserialise it in its own way.
+pub trait Configure {
+	fn new(config: String) -> Self;
+}
+
+/// Sender trait for blocks.
+///
+/// A block must implement creating a closure which sends messages over a
+/// channel when new updates for publishing are ready.
+pub trait Sender {
+	fn get_name(&self) -> String;
+	fn add_sender(&self, s: crossbeam_channel::Sender<Message>);
 }
 
 #[cfg(test)]

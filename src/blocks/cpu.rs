@@ -8,7 +8,12 @@ const PERIOD: u64 = 1000; // Monitor interval in ms
 const PATTERN: &str = r"cpu\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)";
 const PATH: &str = "/proc/stat";
 
-fn calc_cpu(stat: regex::Captures) -> Cpu {
+struct Usage {
+	idle: f32,
+	total: f32,
+}
+
+fn calc_cpu(stat: regex::Captures) -> Usage {
 	// (user, nice, system, idle, iowait, irq, softirq)
 	let stats: Vec<f32> = stat
 		.iter()
@@ -16,19 +21,14 @@ fn calc_cpu(stat: regex::Captures) -> Cpu {
 		.map(|x| x.unwrap().as_str().parse().unwrap())
 		.collect();
 
-	Cpu {
+	Usage {
 		idle: (stats[3] + stats[4]),
 		total: stats.iter().sum(),
 	}
 }
 
-fn calc_dcpu(cpu: &Cpu, prevcpu: &Cpu) -> f32 {
+fn calc_dcpu(cpu: &Usage, prevcpu: &Usage) -> f32 {
 	(1.0 - (cpu.idle - prevcpu.idle) / (cpu.total - prevcpu.total)) * 100.0
-}
-
-struct Cpu {
-	idle: f32,
-	total: f32,
 }
 
 fn match_proc(s: &str) -> regex::Captures {
@@ -44,7 +44,7 @@ pub fn add_sender(
 ) -> &'static str {
 	let monitor = utils::monitor_file(PATH.to_string(), PERIOD);
 	let mut perc = ema::Ema::new(ALPHA);
-	let mut cpu = Cpu {
+	let mut cpu = Usage {
 		idle: 0.0,
 		total: 0.0,
 	};
