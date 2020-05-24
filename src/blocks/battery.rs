@@ -7,7 +7,6 @@ use crate::blocks::{Block, Configure, Message as Msg, Sender};
 use crate::{ema, utils};
 use serde::Deserialize;
 use std::fs;
-use std::sync::mpsc;
 use std::thread;
 use std::time::Instant;
 
@@ -45,7 +44,7 @@ impl Sender for Battery {
 	fn add_sender(&self, s: crossbeam_channel::Sender<Msg>) {
 		let name = self.name.clone();
 		let max = get_max_capacity();
-		let (tx, rx): (mpsc::Sender<Message>, mpsc::Receiver<Message>) = mpsc::channel();
+		let (tx, rx) = crossbeam_channel::unbounded();
 		let mut sremain = "...".to_string();
 		let mut last_status_change = 0;
 		let mut remaining = ema::Ema::new(self.alpha);
@@ -142,7 +141,7 @@ fn str_to_charge(s: &str) -> Message {
 
 /// Continuously monitor `f` for changes, when a change occurs pipe its contents
 /// through `content_fn` and send the results over the sender `tx`.
-fn looper<F, T>(tx: mpsc::Sender<Message>, mut f: utils::Monitor<T>, content_fn: F)
+fn looper<F, T>(tx: crossbeam_channel::Sender<Message>, mut f: utils::Monitor<T>, content_fn: F)
 where
 	F: 'static + Fn(&str) -> Message + Send,
 	T: 'static + FnMut() -> String + Send,
@@ -199,7 +198,7 @@ fn minutes_to_string(remain: f32) -> String {
 
 /// Start watching the appropriate files for changes and return their current
 /// contents.
-fn initialise(period: f32, tx: mpsc::Sender<Message>) -> (f32, Status) {
+fn initialise(period: f32, tx: crossbeam_channel::Sender<Message>) -> (f32, Status) {
 	let mut charge_file = utils::monitor_file(format!("{}/{}", PATH, "charge_now"), period);
 	let mut status_file = utils::monitor_file(format!("{}/{}", PATH, "status"), period);
 
