@@ -31,10 +31,10 @@ impl<T> Monitor<T>
 where
 	T: FnMut() -> String,
 {
-	fn new(reader: T, period: u64) -> Self {
+	fn new(reader: T, period: f32) -> Self {
 		Monitor {
 			reader,
-			period: Duration::from_millis(period),
+			period: Duration::from_secs_f32(period),
 			first: true,
 		}
 	}
@@ -62,7 +62,7 @@ where
 
 /// Monitor a file at a given path. When iterated it's contents are periodically
 /// read.
-pub fn monitor_file(path: String, period: u64) -> Monitor<impl FnMut() -> String> {
+pub fn monitor_file(path: String, period: f32) -> Monitor<impl FnMut() -> String> {
 	let mut file = File::open(&path).unwrap();
 	let mut buf = String::new();
 	Monitor::new(
@@ -83,7 +83,7 @@ pub fn monitor_file(path: String, period: u64) -> Monitor<impl FnMut() -> String
 pub fn monitor_command(
 	cmd: &'static str,
 	args: &'static [&'static str],
-	period: u64,
+	period: f32,
 ) -> Monitor<impl FnMut() -> String> {
 	Monitor::new(
 		move || {
@@ -99,14 +99,14 @@ pub fn monitor_command(
 
 /// Wait for a signal to occur with a given timeout. Sends a message through
 /// the returned receiver when the signal/timeout occurs.
-pub fn wait_for_signal(signal: i32, timeout: u64) -> crossbeam_channel::Receiver<()> {
+pub fn wait_for_signal(signal: i32, timeout: f32) -> crossbeam_channel::Receiver<()> {
 	let (s, r) = crossbeam_channel::unbounded();
 	let s2 = s.clone();
 	unsafe {
 		signal_hook::register(signal, move || s2.send(()).unwrap()).unwrap();
 	}
 	thread::spawn(move || loop {
-		thread::sleep(Duration::from_millis(timeout));
+		thread::sleep(Duration::from_secs_f32(timeout));
 		s.send(()).unwrap();
 	});
 	r

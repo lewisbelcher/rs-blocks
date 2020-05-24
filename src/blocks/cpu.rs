@@ -4,7 +4,7 @@ use regex::Regex;
 use std::thread;
 
 const ALPHA: f32 = 0.7;
-const PERIOD: u64 = 1000; // Monitor interval in ms
+const PERIOD: f32 = 1.0;
 const PATTERN: &str = r"cpu\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)";
 const PATH: &str = "/proc/stat";
 

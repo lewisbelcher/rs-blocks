@@ -11,7 +11,7 @@ pub struct Time {
 	#[serde(default = "default_format")]
 	format: String,
 	#[serde(default = "default_period")]
-	period: u64,
+	period: f32,
 }
 
 fn default_name() -> String {
@@ -22,15 +22,11 @@ fn default_format() -> String {
 	"%a %d %b <b>%H:%M:%S</b>".to_string()
 }
 
-fn default_period() -> u64 {
-	1000
+fn default_period() -> f32 {
+	1.0
 }
 
-impl Configure for Time {
-	fn new(config: String) -> Time {
-		toml::from_str(&config).expect("Invalid config for block 'time'")
-	}
-}
+impl Configure for Time {} // TODO: Implement a procedural macro crate
 
 impl Sender for Time {
 	fn get_name(&self) -> String {
@@ -46,7 +42,7 @@ impl Sender for Time {
 		thread::spawn(move || loop {
 			block.full_text = Some(Local::now().format(&format).to_string());
 			s.send((name.clone(), block.to_string())).unwrap();
-			thread::sleep(Duration::from_millis(period));
+			thread::sleep(Duration::from_secs_f32(period));
 		});
 	}
 }

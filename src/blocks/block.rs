@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// The type sent by a block to the main thread.
 pub type Message = (String, String);
@@ -52,7 +52,12 @@ impl Block {
 /// Configuration is in toml format sent as a string so that each block
 /// sender can deserialise it in its own way.
 pub trait Configure {
-	fn new(config: String) -> Self;
+	fn new<'a>(config: &'a str) -> Self
+	where
+		Self: Sized + Deserialize<'a>,
+	{
+		toml::from_str::<Self>(config).expect(&format!("Invalid config for time block: {}", config))
+	}
 }
 
 /// Sender trait for blocks.

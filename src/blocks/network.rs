@@ -2,7 +2,7 @@ use crate::blocks::Block;
 use crate::utils;
 use std::thread;
 
-const PERIOD: u64 = 1000; // Monitor interval in ms
+const PERIOD: f32 = 1.0;
 const DEVICE: &str = "wlp2s0";
 
 fn get_network_file(direction: &str) -> String {

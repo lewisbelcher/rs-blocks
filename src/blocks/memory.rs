@@ -4,7 +4,7 @@ use regex::Regex;
 use std::thread;
 
 const ALPHA: f32 = 0.5;
-const PERIOD: u64 = 1000; // Monitor interval in ms
+const PERIOD: f32 = 1.0;
 const PATTERN: &str = r"(?s)MemTotal:\s+(\d+).+MemFree:\s+(\d+)";
 const MEMPATH: &str = "/proc/meminfo";
 

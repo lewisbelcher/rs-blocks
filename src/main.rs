@@ -1,18 +1,29 @@
 // use rs_blocks::blocks::{battery, brightness, cpu, memory, network, time, volume};
-use rs_blocks::blocks::{time, Configure, Sender};
+use rs_blocks::args;
+use rs_blocks::blocks::{time, volume, Configure, Sender};
 use std::collections::HashMap;
 use std::process;
+use std::fs;
+
+const DEFAULT_CONFIG: &'static str = r#"
+[time]
+format = "%a %d %b <b>%H:%M:%S</b>"
+period = 1
+"#;
 
 fn main() {
+	let cmd_args = args::collect();
+	let config = if let Some(path) = cmd_args.config {
+		fs::read_to_string(path).unwrap()
+	} else {
+		DEFAULT_CONFIG.to_string()
+	};
+
 	let (s, r) = crossbeam_channel::unbounded();
-	let ss = r#"
-	[time]
-	format = "%a %d %b <b>%H:%M:%S</b>"
-	"#;
 	let mut order = Vec::new();
 
-	for (block_type, config) in parse_config(ss) {
-		let sender = get_struct(&block_type, config.to_string());
+	for (block_type, config) in parse_config(&config) {
+		let sender = create_sender(&block_type, config.to_string());
 		order.push(sender.get_name());
 		sender.add_sender(s.clone());
 	}
@@ -27,14 +38,15 @@ fn main() {
 	}
 }
 
-fn get_struct(name: &str, config: String) -> Box<dyn Sender> {
-	Box::new(match name {
-		"time" => time::Time::new(config),
+fn create_sender(name: &str, config: String) -> Box<dyn Sender> {
+	match name {
+		"time" => Box::new(time::Time::new(&config)),
+		"volume" => Box::new(volume::Volume::new(&config)),
 		_ => {
 			eprintln!("Unrecognised config element '{}'", name);
 			process::exit(1);
 		}
-	})
+	}
 }
 
 /// Return a name->body mapping of a config file. Config file must be in toml

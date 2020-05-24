@@ -7,8 +7,8 @@ pub fn add_sender(
 	s: crossbeam_channel::Sender<(&'static str, String)>,
 ) -> &'static str {
 	let mut block = Block::new(name, true);
-	let mut monitor = utils::monitor_command("brightnessctl", &["g"], 10000);
-	let recv = utils::wait_for_signal(signal_hook::SIGUSR1, 10000);
+	let mut monitor = utils::monitor_command("brightnessctl", &["g"], 10.0);
+	let recv = utils::wait_for_signal(signal_hook::SIGUSR1, 10.0);
 
 	thread::spawn(move || loop {
 		let output = monitor.read();
