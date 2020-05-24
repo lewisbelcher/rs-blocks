@@ -1,6 +1,6 @@
 [package]
 name = "rs-blocks"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Lewis Belcher <belcher_lewis@protonmail.com>"]
 edition = "2018"
 description = "Simple i3blocks replacement."
