@@ -1,7 +1,7 @@
 # Publish crates on crates.io
 
 set -e
-echo $CARGO_TOKEN
+echo $CARGO_TOKEN 1>&2
 # cargo login $CARGO_TOKEN
 # cd rs-blocks-derive
 # cargo publish || :  # Allow error if version exists (other errors should be caught below)
