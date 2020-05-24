@@ -56,7 +56,7 @@ where
 		} else {
 			thread::sleep(self.period);
 		}
-		Some((self.reader)())
+		Some(self.read())
 	}
 }
 
