@@ -12,7 +12,7 @@ use std::thread;
 const MEMPATH: &str = "/proc/meminfo";
 const PATTERN: &str = r"(?s)MemTotal:\s+(\d+).+MemFree:\s+(\d+)";
 
-#[derive(Deserialize)]
+#[derive(Configure, Deserialize)]
 pub struct Memory {
 	#[serde(default = "default_name")]
 	name: String,
@@ -34,15 +34,9 @@ fn default_alpha() -> f32 {
 	0.5
 }
 
-impl Configure for Memory {}
-
 impl Sender for Memory {
-	fn get_name(&self) -> String {
-		self.name.clone()
-	}
-
 	fn add_sender(&self, s: crossbeam_channel::Sender<Message>) {
-		let name = self.name.clone();
+		let name = self.get_name();
 		let monitor = utils::monitor_file(MEMPATH.to_string(), self.period);
 		let mut mem = ema::Ema::new(self.alpha);
 		let mut block = Block::new(name.clone(), true);

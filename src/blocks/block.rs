@@ -73,14 +73,15 @@ pub trait Configure {
 	{
 		instance
 	}
+
+	fn get_name(&self) -> String;
 }
 
 /// Sender trait for blocks.
 ///
 /// A block must implement creating a closure which sends messages over a
 /// channel when new updates for publishing are ready.
-pub trait Sender {
-	fn get_name(&self) -> String;
+pub trait Sender: Configure {
 	fn add_sender(&self, s: crossbeam_channel::Sender<Message>);
 }
 

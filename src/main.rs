@@ -44,6 +44,7 @@ fn main() {
 	}
 }
 
+/// Create a sender object for a given config.
 fn create_sender(name: &str, config: String) -> Box<dyn Sender> {
 	match name {
 		"battery" => Box::new(battery::Battery::new(&config)),

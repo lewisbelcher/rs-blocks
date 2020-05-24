@@ -464,10 +464,19 @@ dependencies = [
  "dirs 2.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rs-blocks-derive 0.1.0",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)",
  "signal-hook 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "rs-blocks-derive"
+version = "0.1.0"
+dependencies = [
+ "quote 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "syn 1.0.23 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

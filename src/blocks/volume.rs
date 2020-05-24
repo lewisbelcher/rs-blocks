@@ -8,7 +8,7 @@ use crate::utils;
 use serde::Deserialize;
 use std::thread;
 
-#[derive(Deserialize)]
+#[derive(Configure, Deserialize)]
 pub struct Volume {
 	#[serde(default = "default_name")]
 	name: String,
@@ -30,13 +30,7 @@ fn default_update_signal() -> i32 {
 	signal_hook::SIGUSR2
 }
 
-impl Configure for Volume {}
-
 impl Sender for Volume {
-	fn get_name(&self) -> String {
-		self.name.clone()
-	}
-
 	fn add_sender(&self, s: crossbeam_channel::Sender<Message>) {
 		let re = regex::Regex::new(r"\[(?P<percent>\d+%)\] \[(?P<status>on|off)\]").unwrap();
 		let mut block = Block::new(self.name.clone(), true);

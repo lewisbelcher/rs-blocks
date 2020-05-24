@@ -12,7 +12,7 @@ use std::time::Instant;
 
 const PATH: &str = "/sys/class/power_supply/BAT0";
 
-#[derive(Deserialize)]
+#[derive(Configure, Deserialize)]
 pub struct Battery {
 	#[serde(default = "default_name")]
 	name: String,
@@ -34,15 +34,9 @@ fn default_alpha() -> f32 {
 	0.8
 }
 
-impl Configure for Battery {}
-
 impl Sender for Battery {
-	fn get_name(&self) -> String {
-		self.name.clone()
-	}
-
 	fn add_sender(&self, s: crossbeam_channel::Sender<Msg>) {
-		let name = self.name.clone();
+		let name = self.get_name();
 		let max = get_max_capacity();
 		let (tx, rx) = crossbeam_channel::unbounded();
 		let mut sremain = "...".to_string();

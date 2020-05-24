@@ -9,7 +9,7 @@ use serde::Deserialize;
 use std::thread;
 use std::time::Duration;
 
-#[derive(Deserialize)]
+#[derive(Configure, Deserialize)]
 pub struct Time {
 	#[serde(default = "default_name")]
 	name: String,
@@ -31,15 +31,9 @@ fn default_period() -> f32 {
 	1.0
 }
 
-impl Configure for Time {} // TODO: Implement a procedural macro crate
-
 impl Sender for Time {
-	fn get_name(&self) -> String {
-		self.name.clone()
-	}
-
 	fn add_sender(&self, s: crossbeam_channel::Sender<Message>) {
-		let name = self.name.clone();
+		let name = self.get_name();
 		let format = self.format.clone();
 		let period = self.period;
 		let mut block = Block::new(name.clone(), true);

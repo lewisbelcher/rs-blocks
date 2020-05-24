@@ -8,7 +8,7 @@ use crate::utils;
 use serde::Deserialize;
 use std::thread;
 
-#[derive(Deserialize)]
+#[derive(Configure, Deserialize)]
 pub struct Brightness {
 	#[serde(default = "default_name")]
 	name: String,
@@ -30,15 +30,9 @@ fn default_update_signal() -> i32 {
 	signal_hook::SIGUSR1
 }
 
-impl Configure for Brightness {}
-
 impl Sender for Brightness {
-	fn get_name(&self) -> String {
-		self.name.clone()
-	}
-
 	fn add_sender(&self, s: crossbeam_channel::Sender<Message>) {
-		let name = self.name.clone();
+		let name = self.get_name();
 		let mut block = Block::new(name.clone(), true);
 		let mut monitor = utils::monitor_command("brightnessctl", &["g"], self.period);
 		let recv = utils::wait_for_signal(self.update_signal, self.period);

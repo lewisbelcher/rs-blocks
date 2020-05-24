@@ -40,15 +40,15 @@ impl Configure for Network {
 		instance.tx_file = Some(get_network_file(&instance.device, "tx"));
 		instance
 	}
-}
 
-impl Sender for Network {
 	fn get_name(&self) -> String {
 		self.name.clone()
 	}
+}
 
+impl Sender for Network {
 	fn add_sender(&self, s: crossbeam_channel::Sender<Message>) {
-		let name = self.name.clone();
+		let name = self.get_name();
 		let rx_file = utils::monitor_file(self.rx_file.as_ref().unwrap().clone(), self.period);
 		let mut tx_file = utils::monitor_file(self.tx_file.as_ref().unwrap().clone(), self.period);
 		let coef = 1.0 / (self.period * 1024.0); // Report in kB

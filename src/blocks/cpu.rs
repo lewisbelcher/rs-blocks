@@ -12,7 +12,7 @@ use std::thread;
 const PATTERN: &str = r"cpu\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)";
 const PATH: &str = "/proc/stat";
 
-#[derive(Deserialize)]
+#[derive(Configure, Deserialize)]
 pub struct Cpu {
 	#[serde(default = "default_name")]
 	name: String,
@@ -34,15 +34,9 @@ fn default_alpha() -> f32 {
 	0.7
 }
 
-impl Configure for Cpu {}
-
 impl Sender for Cpu {
-	fn get_name(&self) -> String {
-		self.name.clone()
-	}
-
 	fn add_sender(&self, s: crossbeam_channel::Sender<Message>) {
-		let name = self.name.clone();
+		let name = self.get_name();
 		let monitor = utils::monitor_file(PATH.to_string(), self.period);
 		let mut perc = ema::Ema::new(self.alpha);
 		let mut cpu = Usage {
