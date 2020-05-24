@@ -15,7 +15,7 @@ Installation
 
 1. [Get Rust](https://www.rust-lang.org/tools/install)
 2. Clone this repo (optional)
-3. Run `cargo install --path <repo path>` (if you did step 3) or `cargo install rs-blocks`
+3. Run `cargo install --path <repo path>` (if you did step 2) or `cargo install rs-blocks`
 4. Use `rs-blocks`!
 
 Configuration
