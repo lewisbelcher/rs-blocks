@@ -18,6 +18,38 @@ Installation
 3. Run `cargo install --path <repo path>` (if you did step 3) or `cargo install rs-blocks`
 4. Use `rs-blocks`!
 
+Configuration
+-------------
+
+`rs-blocks` will look for `$XDG_CONFIG_HOME/rs-blocks/config` for a config file.
+Alternatively, a config file can be specified by using the argument `--config`.
+
+Config files should be in [toml format](https://github.com/toml-lang/toml). The
+section title must match an available block type, and the remaining config within
+each section will be used to configure that block.
+
+Multiple entries of the same block can be given as long as they specify different
+`name`s. E.g.:
+
+    [time]
+    name = "time1"
+    format = "%D"
+
+    [time]
+    name = "time2"
+    format = "%S"
+
+Blocks will appear in the order they are given in the config file.
+
+Available blocks are:
+  * Battery
+  * Brightness (using `brightnessctl`)
+  * CPU
+  * Memory
+  * Network
+  * Time
+  * Volume (using `amixer`)
+
 Implementation
 --------------
 
