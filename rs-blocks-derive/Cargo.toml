@@ -3,11 +3,15 @@ name = "rs-blocks-derive"
 version = "0.1.0"
 authors = ["Lewis Belcher <belcher_lewis@protonmail.com>"]
 edition = "2018"
+description = "Derive implementations for the rs-blocks crate."
+license = "MIT"
+keywords = ["i3blocks", "derive", "proc-macro"]
+homepage = "https://gitlab.com/lewisbelcher/rs-blocks"
+readme = "README.md"
 
 [lib]
 proc-macro = true
 
 [dependencies]
-# rs-blocks = { path = "../" }
 quote = "1.0"
 syn = "1.0"

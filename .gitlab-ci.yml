@@ -12,7 +12,6 @@ test:
 publish:
   stage: publish
   script: 
-    - cargo login $CARGO_TOKEN
-    - cargo publish
+    - bash publish.sh
   only:
     - tags
