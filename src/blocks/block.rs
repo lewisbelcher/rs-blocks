@@ -51,12 +51,22 @@ impl Block {
 ///
 /// Configuration is in toml format sent as a string so that each block
 /// sender can deserialise it in its own way.
+#[allow(unused_mut)] // `post_deserialise` doesn't mutate, but it's implementers might
 pub trait Configure {
 	fn new<'a>(config: &'a str) -> Self
 	where
 		Self: Sized + Deserialize<'a>,
 	{
-		toml::from_str::<Self>(config).expect(&format!("Invalid config for time block: {}", config))
+		let mut instance: Self =
+			toml::from_str(config).expect(&format!("Invalid config for block: {}", config));
+		Self::post_deserialise(instance)
+	}
+
+	fn post_deserialise(mut instance: Self) -> Self
+	where
+		Self: Sized,
+	{
+		instance
 	}
 }
 
@@ -72,10 +82,9 @@ pub trait Sender {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use serde_json;
 
 	#[test]
 	fn create_json() {
-		Block::new("hi", true).to_string();
+		Block::new("hi".to_string(), true).to_string();
 	}
 }

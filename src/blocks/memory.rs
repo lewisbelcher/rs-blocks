@@ -1,12 +1,56 @@
-use crate::blocks::Block;
+use crate::blocks::{Block, Configure, Message, Sender};
 use crate::{ema, utils};
 use regex::Regex;
+use serde::Deserialize;
 use std::thread;
 
-const ALPHA: f32 = 0.5;
-const PERIOD: f32 = 1.0;
-const PATTERN: &str = r"(?s)MemTotal:\s+(\d+).+MemFree:\s+(\d+)";
 const MEMPATH: &str = "/proc/meminfo";
+const PATTERN: &str = r"(?s)MemTotal:\s+(\d+).+MemFree:\s+(\d+)";
+
+#[derive(Deserialize)]
+pub struct Memory {
+	#[serde(default = "default_name")]
+	name: String,
+	#[serde(default = "default_period")]
+	period: f32,
+	#[serde(default = "default_alpha")]
+	alpha: f32,
+}
+
+fn default_name() -> String {
+	"memory".to_string()
+}
+
+fn default_period() -> f32 {
+	1.0
+}
+
+fn default_alpha() -> f32 {
+	0.5
+}
+
+impl Configure for Memory {}
+
+impl Sender for Memory {
+	fn get_name(&self) -> String {
+		self.name.clone()
+	}
+
+	fn add_sender(&self, s: crossbeam_channel::Sender<Message>) {
+		let name = self.name.clone();
+		let monitor = utils::monitor_file(MEMPATH.to_string(), self.period);
+		let mut mem = ema::Ema::new(self.alpha);
+		let mut block = Block::new(name.clone(), true);
+
+		thread::spawn(move || {
+			for text in monitor {
+				let perc = get_mem_percentage(match_mem_stats(&text));
+				block.full_text = Some(format!(" {:.1}%", mem.push(perc) * 100.0));
+				s.send((name.clone(), block.to_string())).unwrap();
+			}
+		});
+	}
+}
 
 #[derive(Debug, PartialEq)]
 struct MemStats {
@@ -27,24 +71,6 @@ fn match_mem_stats(s: &str) -> MemStats {
 
 fn get_mem_percentage(mem: MemStats) -> f32 {
 	1.0 - mem.free as f32 / mem.total as f32
-}
-
-pub fn add_sender(
-	name: &'static str,
-	s: crossbeam_channel::Sender<(&'static str, String)>,
-) -> &'static str {
-	let monitor = utils::monitor_file(MEMPATH.to_string(), PERIOD);
-	let mut mem = ema::Ema::new(ALPHA);
-	let mut block = Block::new(name, true);
-
-	thread::spawn(move || {
-		for c in monitor {
-			let perc = get_mem_percentage(match_mem_stats(&c));
-			block.full_text = Some(format!(" {:.1}%", mem.push(perc) * 100.0));
-			s.send((name, block.to_string())).unwrap();
-		}
-	});
-	name
 }
 
 #[cfg(test)]

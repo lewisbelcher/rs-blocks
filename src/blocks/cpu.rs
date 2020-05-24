@@ -1,12 +1,64 @@
-use crate::blocks::Block;
+use crate::blocks::{Block, Configure, Message, Sender};
 use crate::{ema, utils};
 use regex::Regex;
+use serde::Deserialize;
 use std::thread;
 
-const ALPHA: f32 = 0.7;
-const PERIOD: f32 = 1.0;
 const PATTERN: &str = r"cpu\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)";
 const PATH: &str = "/proc/stat";
+
+#[derive(Deserialize)]
+pub struct Cpu {
+	#[serde(default = "default_name")]
+	name: String,
+	#[serde(default = "default_period")]
+	period: f32,
+	#[serde(default = "default_alpha")]
+	alpha: f32,
+}
+
+fn default_name() -> String {
+	"cpu".to_string()
+}
+
+fn default_period() -> f32 {
+	1.0
+}
+
+fn default_alpha() -> f32 {
+	0.7
+}
+
+impl Configure for Cpu {}
+
+impl Sender for Cpu {
+	fn get_name(&self) -> String {
+		self.name.clone()
+	}
+
+	fn add_sender(&self, s: crossbeam_channel::Sender<Message>) {
+		let name = self.name.clone();
+		let monitor = utils::monitor_file(PATH.to_string(), self.period);
+		let mut perc = ema::Ema::new(self.alpha);
+		let mut cpu = Usage {
+			idle: 0.0,
+			total: 0.0,
+		};
+		let mut block = Block::new(name.clone(), true);
+
+		thread::spawn(move || {
+			for c in monitor {
+				let current_cpu = calc_cpu(match_proc(&c));
+				block.full_text = Some(format!(
+					" {:.1}%",
+					perc.push(calc_dcpu(&current_cpu, &cpu))
+				));
+				s.send((name.clone(), block.to_string())).unwrap();
+				cpu = current_cpu;
+			}
+		});
+	}
+}
 
 struct Usage {
 	idle: f32,
@@ -36,30 +88,4 @@ fn match_proc(s: &str) -> regex::Captures {
 		static ref RE: Regex = Regex::new(PATTERN).unwrap();
 	}
 	RE.captures(s).unwrap()
-}
-
-pub fn add_sender(
-	name: &'static str,
-	s: crossbeam_channel::Sender<(&'static str, String)>,
-) -> &'static str {
-	let monitor = utils::monitor_file(PATH.to_string(), PERIOD);
-	let mut perc = ema::Ema::new(ALPHA);
-	let mut cpu = Usage {
-		idle: 0.0,
-		total: 0.0,
-	};
-	let mut block = Block::new(name, true);
-
-	thread::spawn(move || {
-		for c in monitor {
-			let current_cpu = calc_cpu(match_proc(&c));
-			block.full_text = Some(format!(
-				" {:.1}%",
-				perc.push(calc_dcpu(&current_cpu, &cpu))
-			));
-			s.send((name, block.to_string())).unwrap();
-			cpu = current_cpu;
-		}
-	});
-	name
 }

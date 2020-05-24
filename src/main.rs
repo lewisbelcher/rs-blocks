@@ -1,9 +1,10 @@
-// use rs_blocks::blocks::{battery, brightness, cpu, memory, network, time, volume};
 use rs_blocks::args;
-use rs_blocks::blocks::{time, volume, Configure, Sender};
+use rs_blocks::blocks::{
+	battery, brightness, cpu, memory, network, time, volume, Configure, Sender,
+};
 use std::collections::HashMap;
-use std::process;
 use std::fs;
+use std::process;
 
 const DEFAULT_CONFIG: &'static str = r#"
 [time]
@@ -40,6 +41,11 @@ fn main() {
 
 fn create_sender(name: &str, config: String) -> Box<dyn Sender> {
 	match name {
+		"battery" => Box::new(battery::Battery::new(&config)),
+		"brightness" => Box::new(brightness::Brightness::new(&config)),
+		"cpu" => Box::new(cpu::Cpu::new(&config)),
+		"memory" => Box::new(memory::Memory::new(&config)),
+		"network" => Box::new(network::Network::new(&config)),
 		"time" => Box::new(time::Time::new(&config)),
 		"volume" => Box::new(volume::Volume::new(&config)),
 		_ => {

@@ -1,13 +1,104 @@
-use crate::blocks::Block;
+use crate::blocks::{Block, Configure, Message as Msg, Sender};
 use crate::{ema, utils};
+use serde::Deserialize;
 use std::fs;
 use std::sync::mpsc;
 use std::thread;
 use std::time::Instant;
 
 const PATH: &str = "/sys/class/power_supply/BAT0";
-const ALPHA: f32 = 0.8; // Exponential moving average coefficient
-const PERIOD: u64 = 500; // Monitor interval in ms
+
+#[derive(Deserialize)]
+pub struct Battery {
+	#[serde(default = "default_name")]
+	name: String,
+	#[serde(default = "default_period")]
+	period: f32,
+	#[serde(default = "default_alpha")]
+	alpha: f32,
+}
+
+fn default_name() -> String {
+	"battery".to_string()
+}
+
+fn default_period() -> f32 {
+	0.6
+}
+
+fn default_alpha() -> f32 {
+	0.8
+}
+
+impl Configure for Battery {}
+
+impl Sender for Battery {
+	fn get_name(&self) -> String {
+		self.name.clone()
+	}
+
+	fn add_sender(&self, s: crossbeam_channel::Sender<Msg>) {
+		let name = self.name.clone();
+		let max = get_max_capacity();
+		let (tx, rx): (mpsc::Sender<Message>, mpsc::Receiver<Message>) = mpsc::channel();
+		let mut sremain = "...".to_string();
+		let mut last_status_change = 0;
+		let mut remaining = ema::Ema::new(self.alpha);
+		let (mut current_charge, mut current_status) = initialise(self.period, tx);
+		let mut then = Instant::now();
+		let mut percent = current_charge / max;
+		let mut block = Block::new(name.clone(), true);
+		let mut symbol = get_symbol(current_status, percent);
+
+		if current_status == Status::Full {
+			block.full_text = Some(create_full_text(&symbol, percent, "Full"));
+			s.send((name.clone(), block.to_string())).unwrap();
+		}
+
+		thread::spawn(move || loop {
+			let message = rx.recv().unwrap();
+			let now = Instant::now();
+
+			match message {
+				Message::Charge(charge) => {
+					sremain = if last_status_change == 0 {
+						remaining.reset();
+						"...".to_string()
+					} else {
+						let elapsed = now.duration_since(then).as_secs() as f32 / 60.0;
+						let gap = match current_status {
+							Status::Charging => max - charge,
+							Status::Discharging => charge,
+							Status::Full => 0.0,
+							Status::Unknown => charge,
+						};
+						let rate = (charge - current_charge).abs() / elapsed;
+						minutes_to_string(remaining.push(gap / rate))
+					};
+
+					then = now;
+					current_charge = charge;
+					last_status_change += 1;
+					percent = current_charge / max;
+				}
+				Message::Status(status) => {
+					if status != current_status {
+						last_status_change = 0;
+						current_status = status;
+						sremain = "...".to_string();
+					}
+				}
+			}
+			if current_status == Status::Full {
+				sremain = "Full".to_string();
+			}
+			symbol = get_symbol(current_status, percent);
+
+			block.full_text = Some(create_full_text(&symbol, percent, &sremain));
+			s.send((name.clone(), block.to_string())).unwrap();
+		});
+	}
+}
 
 fn get_max_capacity() -> f32 {
 	let path = format!("{}/{}", PATH, "charge_full");
@@ -103,9 +194,9 @@ fn minutes_to_string(remain: f32) -> String {
 
 /// Start watching the appropriate files for changes and return their current
 /// contents.
-fn initialise(tx: mpsc::Sender<Message>) -> (f32, Status) {
-	let mut charge_file = utils::monitor_file(format!("{}/{}", PATH, "charge_now"), PERIOD);
-	let mut status_file = utils::monitor_file(format!("{}/{}", PATH, "status"), PERIOD);
+fn initialise(period: f32, tx: mpsc::Sender<Message>) -> (f32, Status) {
+	let mut charge_file = utils::monitor_file(format!("{}/{}", PATH, "charge_now"), period);
+	let mut status_file = utils::monitor_file(format!("{}/{}", PATH, "status"), period);
 
 	let current_charge = match str_to_charge(&charge_file.read()) {
 		Message::Charge(charge) => charge,
@@ -121,71 +212,6 @@ fn initialise(tx: mpsc::Sender<Message>) -> (f32, Status) {
 	looper(tx.clone(), status_file, str_to_status);
 
 	(current_charge, current_status)
-}
-
-pub fn add_sender(
-	name: &'static str,
-	s: crossbeam_channel::Sender<(&'static str, String)>,
-) -> &'static str {
-	let max = get_max_capacity();
-	let (tx, rx): (mpsc::Sender<Message>, mpsc::Receiver<Message>) = mpsc::channel();
-	let mut sremain = "...".to_string();
-	let mut last_status_change = 0;
-	let mut remaining = ema::Ema::new(ALPHA);
-	let (mut current_charge, mut current_status) = initialise(tx);
-	let mut then = Instant::now();
-	let mut percent = current_charge / max;
-	let mut block = Block::new(name, true);
-	let mut symbol = get_symbol(current_status, percent);
-
-	if current_status == Status::Full {
-		block.full_text = Some(create_full_text(&symbol, percent, "Full"));
-		s.send((name, block.to_string())).unwrap();
-	}
-
-	thread::spawn(move || loop {
-		let message = rx.recv().unwrap();
-		let now = Instant::now();
-
-		match message {
-			Message::Charge(charge) => {
-				sremain = if last_status_change == 0 {
-					remaining.reset();
-					"...".to_string()
-				} else {
-					let elapsed = now.duration_since(then).as_secs() as f32 / 60.0;
-					let gap = match current_status {
-						Status::Charging => max - charge,
-						Status::Discharging => charge,
-						Status::Full => 0.0,
-						Status::Unknown => charge,
-					};
-					let rate = (charge - current_charge).abs() / elapsed;
-					minutes_to_string(remaining.push(gap / rate))
-				};
-
-				then = now;
-				current_charge = charge;
-				last_status_change += 1;
-				percent = current_charge / max;
-			}
-			Message::Status(status) => {
-				if status != current_status {
-					last_status_change = 0;
-					current_status = status;
-					sremain = "...".to_string();
-				}
-			}
-		}
-		if current_status == Status::Full {
-			sremain = "Full".to_string();
-		}
-		symbol = get_symbol(current_status, percent);
-
-		block.full_text = Some(create_full_text(&symbol, percent, &sremain));
-		s.send((name, block.to_string())).unwrap();
-	});
-	name
 }
 
 fn create_full_text(symbol: &str, percent: f32, remaining: &str) -> String {
