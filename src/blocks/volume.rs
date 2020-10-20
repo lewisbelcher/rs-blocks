@@ -32,17 +32,17 @@ fn default_update_signal() -> i32 {
 
 impl Sender for Volume {
 	fn add_sender(&self, s: crossbeam_channel::Sender<Message>) {
-		let re = regex::Regex::new(r"\[(?P<percent>\d+%)\] \[(?P<status>on|off)\]").unwrap();
-		let mut block = Block::new(self.name.clone(), true);
-		let mut monitor = utils::monitor_command("amixer", &[], self.period);
-		let recv = utils::wait_for_signal(self.update_signal, self.period);
 		let name = self.get_name();
+		let re = regex::Regex::new(r"(?P<mute>\d)\n(?P<volume>\d+)").unwrap();
+		let mut block = Block::new(self.name.clone(), true);
+		let mut monitor = utils::monitor_command("pulsemixer", &["--get-mute", "--get-volume"], self.period);
+		let recv = utils::wait_for_signal(self.update_signal, self.period);
 
 		thread::spawn(move || loop {
 			let output = monitor.read();
 			block.full_text = Some(if let Some(captures) = re.captures(&output) {
-				if captures.name("status").unwrap().as_str() == "on" {
-					format!(" {}", captures.name("percent").unwrap().as_str())
+				if captures.name("mute").unwrap().as_str() == "0" {
+					format!(" {}%", captures.name("volume").unwrap().as_str())
 				} else {
 					"".to_string()
 				}
