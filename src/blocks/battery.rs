@@ -151,14 +151,14 @@ where
 	});
 }
 
-/// Given a percentage of charge, wrap the string `s` in an appropriate color.
-fn wrap_in_color(s: &str, percent: f32) -> String {
-	let color = if percent > 0.5 {
+/// Given a percentage of charge, wrap the string `s` in an appropriate colour.
+fn wrap_in_colour(s: &str, percent: f32) -> String {
+	let colour = if percent > 0.5 {
 		format!("{:0>2x}ff00", 255 - (510.0 * (percent - 0.5)) as i32)
 	} else {
-		format!("ff{:2x}00", (510.0 * percent) as i32)
+		format!("ff{:0>2x}00", (510.0 * percent) as i32)
 	};
-	format!("<span foreground='#{}'>{}</span>", color, s)
+	format!("<span foreground='#{}'>{}</span>", colour, s)
 }
 
 /// Given a percentage of charge, return an appropriate battery symbol.
@@ -181,7 +181,7 @@ fn get_symbol(status: Status, percent: f32) -> String {
 		Status::Discharging => get_discharge_symbol(percent),
 		_ => " ",
 	};
-	wrap_in_color(s, percent)
+	wrap_in_colour(s, percent)
 }
 
 /// Convert a float of minutes into a string of hours and minutes.
@@ -224,5 +224,14 @@ mod test {
 	fn minutes_to_string_works() {
 		assert_eq!(minutes_to_string(302.2), "5h02m");
 		assert_eq!(minutes_to_string(302.7), "5h03m");
+	}
+
+	#[test]
+	fn test_wrap_in_colour() {
+		let result = wrap_in_colour("a", 1.0);
+		assert_eq!(result, "<span foreground=\'#00ff00\'>a</span>");
+
+		let result = wrap_in_colour("a", 0.01);
+		assert_eq!(result, "<span foreground=\'#ff0500\'>a</span>");
 	}
 }

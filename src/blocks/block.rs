@@ -15,7 +15,7 @@ pub struct Block {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub background: Option<String>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub color: Option<String>,
+	pub colour: Option<String>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub full_text: Option<String>,
 	#[serde(skip_serializing_if = "Option::is_none")]
@@ -31,7 +31,7 @@ impl Block {
 		Block {
 			name,
 			background: None,
-			color: None,
+			colour: None,
 			full_text: None,
 			markup: if pango {
 				Some("pango".to_string())
