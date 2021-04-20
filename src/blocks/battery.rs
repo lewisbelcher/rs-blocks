@@ -20,6 +20,8 @@ pub struct Battery {
 	period: f32,
 	#[serde(default = "default_alpha")]
 	alpha: f32,
+	#[serde(default = "default_charge_prefix")]
+	charge_prefix: String,
 }
 
 fn default_name() -> String {
@@ -34,15 +36,20 @@ fn default_alpha() -> f32 {
 	0.8
 }
 
+fn default_charge_prefix() -> String {
+	"charge".to_string()
+}
+
 impl Sender for Battery {
 	fn add_sender(&self, s: crossbeam_channel::Sender<Msg>) {
 		let name = self.get_name();
-		let max = get_max_capacity();
+		let max = get_max_capacity(&self.charge_prefix);
 		let (tx, rx) = crossbeam_channel::unbounded();
 		let mut sremain = "...".to_string();
 		let mut last_status_change = 0;
 		let mut remaining = ema::Ema::new(self.alpha);
-		let (mut current_charge, mut current_status) = initialise(self.period, tx);
+		let (mut current_charge, mut current_status) =
+			initialise(&self.charge_prefix, self.period, tx);
 		let mut then = Instant::now();
 		let mut percent = current_charge / max;
 		let mut block = Block::new(name.clone(), true);
@@ -98,8 +105,8 @@ impl Sender for Battery {
 	}
 }
 
-fn get_max_capacity() -> f32 {
-	let path = format!("{}/{}", PATH, "charge_full");
+fn get_max_capacity(charge_prefix: &str) -> f32 {
+	let path = format!("{}/{}_full", PATH, charge_prefix);
 	utils::str_to_f32(&fs::read_to_string(&path).unwrap()).unwrap()
 }
 
@@ -192,9 +199,13 @@ fn minutes_to_string(remain: f32) -> String {
 
 /// Start watching the appropriate files for changes and return their current
 /// contents.
-fn initialise(period: f32, tx: crossbeam_channel::Sender<Message>) -> (f32, Status) {
-	let mut charge_file = utils::monitor_file(format!("{}/{}", PATH, "charge_now"), period);
-	let mut status_file = utils::monitor_file(format!("{}/{}", PATH, "status"), period);
+fn initialise(
+	charge_prefix: &str,
+	period: f32,
+	tx: crossbeam_channel::Sender<Message>,
+) -> (f32, Status) {
+	let mut charge_file = utils::monitor_file(format!("{}/{}_now", PATH, charge_prefix), period);
+	let mut status_file = utils::monitor_file(format!("{}/status", PATH), period);
 
 	let current_charge = match str_to_charge(&charge_file.read()) {
 		Message::Charge(charge) => charge,
