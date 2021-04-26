@@ -82,7 +82,7 @@ pub trait Configure {
 /// A block must implement creating a closure which sends messages over a
 /// channel when new updates for publishing are ready.
 pub trait Sender: Configure {
-	fn add_sender(&self, s: crossbeam_channel::Sender<Message>);
+	fn add_sender(&self, channel: crossbeam_channel::Sender<Message>);
 }
 
 #[cfg(test)]

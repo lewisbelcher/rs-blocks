@@ -35,7 +35,7 @@ fn default_alpha() -> f32 {
 }
 
 impl Sender for Memory {
-	fn add_sender(&self, s: crossbeam_channel::Sender<Message>) {
+	fn add_sender(&self, channel: crossbeam_channel::Sender<Message>) {
 		let name = self.get_name();
 		let monitor = utils::monitor_file(MEMPATH.to_string(), self.period);
 		let mut mem = ema::Ema::new(self.alpha);
@@ -45,7 +45,7 @@ impl Sender for Memory {
 			for text in monitor {
 				let perc = get_mem_percentage(match_mem_stats(&text));
 				block.full_text = Some(format!(" {:.1}%", mem.push(perc) * 100.0));
-				s.send((name.clone(), block.to_string())).unwrap();
+				channel.send((name.clone(), block.to_string())).unwrap();
 			}
 		});
 	}

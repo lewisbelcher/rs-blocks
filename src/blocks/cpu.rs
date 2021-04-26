@@ -35,7 +35,7 @@ fn default_alpha() -> f32 {
 }
 
 impl Sender for Cpu {
-	fn add_sender(&self, s: crossbeam_channel::Sender<Message>) {
+	fn add_sender(&self, channel: crossbeam_channel::Sender<Message>) {
 		let name = self.get_name();
 		let monitor = utils::monitor_file(PATH.to_string(), self.period);
 		let mut perc = ema::Ema::new(self.alpha);
@@ -52,7 +52,7 @@ impl Sender for Cpu {
 					" {:.1}%",
 					perc.push(calc_dcpu(&current_cpu, &cpu))
 				));
-				s.send((name.clone(), block.to_string())).unwrap();
+				channel.send((name.clone(), block.to_string())).unwrap();
 				cpu = current_cpu;
 			}
 		});
