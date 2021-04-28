@@ -140,8 +140,9 @@ fn str_to_charge(s: &str) -> Message {
 	Message::Charge(s.trim().parse().unwrap())
 }
 
-/// Continuously monitor `f` for changes, when a change occurs pipe its contents
-/// through `content_fn` and send the results over the sender `tx`.
+/// Continuously monitor `f` for changes, when a change occurs or more than 10
+/// checks have occurred, pipe its contents through `content_fn` and send the
+/// results over the sender `tx`.
 fn looper<F, T>(tx: crossbeam_channel::Sender<Message>, mut f: utils::Monitor<T>, content_fn: F)
 where
 	F: 'static + Fn(&str) -> Message + Send,
@@ -149,11 +150,15 @@ where
 {
 	thread::spawn(move || {
 		let mut prev = f.read();
+		let mut i = 0;
+
 		for contents in f {
-			if contents != prev {
+			if contents != prev || i > 10 {
 				tx.send(content_fn(&contents)).unwrap();
 				prev = contents;
+				i = 0;
 			}
+			i += 1;
 		}
 	});
 }
