@@ -20,6 +20,8 @@ pub struct Battery {
 	period: f32,
 	#[serde(default = "default_alpha")]
 	alpha: f32,
+	#[serde(default = "default_charge_prefix")]
+	charge_prefix: String,
 }
 
 fn default_name() -> String {
@@ -34,23 +36,28 @@ fn default_alpha() -> f32 {
 	0.8
 }
 
+fn default_charge_prefix() -> String {
+	"charge".to_string()
+}
+
 impl Sender for Battery {
-	fn add_sender(&self, s: crossbeam_channel::Sender<Msg>) {
+	fn add_sender(&self, channel: crossbeam_channel::Sender<Msg>) {
 		let name = self.get_name();
-		let max = get_max_capacity();
+		let max = get_max_capacity(&self.charge_prefix);
 		let (tx, rx) = crossbeam_channel::unbounded();
 		let mut sremain = "...".to_string();
 		let mut last_status_change = 0;
 		let mut remaining = ema::Ema::new(self.alpha);
-		let (mut current_charge, mut current_status) = initialise(self.period, tx);
+		let (mut current_charge, mut current_status) =
+			initialise(&self.charge_prefix, self.period, tx);
 		let mut then = Instant::now();
-		let mut percent = current_charge / max;
+		let mut fraction = (current_charge / max).min(1.0);
 		let mut block = Block::new(name.clone(), true);
-		let mut symbol = get_symbol(current_status, percent);
+		let mut symbol = get_symbol(current_status, fraction);
 
 		if current_status == Status::Full {
-			block.full_text = Some(create_full_text(&symbol, percent, "Full"));
-			s.send((name.clone(), block.to_string())).unwrap();
+			block.full_text = Some(create_full_text(&symbol, fraction, "Full"));
+			channel.send((name.clone(), block.to_string())).unwrap();
 		}
 
 		thread::spawn(move || loop {
@@ -77,7 +84,7 @@ impl Sender for Battery {
 					then = now;
 					current_charge = charge;
 					last_status_change += 1;
-					percent = current_charge / max;
+					fraction = (current_charge / max).min(1.0);
 				}
 				Message::Status(status) => {
 					if status != current_status {
@@ -90,16 +97,16 @@ impl Sender for Battery {
 			if current_status == Status::Full {
 				sremain = "Full".to_string();
 			}
-			symbol = get_symbol(current_status, percent);
+			symbol = get_symbol(current_status, fraction);
 
-			block.full_text = Some(create_full_text(&symbol, percent, &sremain));
-			s.send((name.clone(), block.to_string())).unwrap();
+			block.full_text = Some(create_full_text(&symbol, fraction, &sremain));
+			channel.send((name.clone(), block.to_string())).unwrap();
 		});
 	}
 }
 
-fn get_max_capacity() -> f32 {
-	let path = format!("{}/{}", PATH, "charge_full");
+fn get_max_capacity(charge_prefix: &str) -> f32 {
+	let path = format!("{}/{}_full", PATH, charge_prefix);
 	utils::str_to_f32(&fs::read_to_string(&path).unwrap()).unwrap()
 }
 
@@ -133,8 +140,9 @@ fn str_to_charge(s: &str) -> Message {
 	Message::Charge(s.trim().parse().unwrap())
 }
 
-/// Continuously monitor `f` for changes, when a change occurs pipe its contents
-/// through `content_fn` and send the results over the sender `tx`.
+/// Continuously monitor `f` for changes, when a change occurs or more than 10
+/// checks have occurred, pipe its contents through `content_fn` and send the
+/// results over the sender `tx`.
 fn looper<F, T>(tx: crossbeam_channel::Sender<Message>, mut f: utils::Monitor<T>, content_fn: F)
 where
 	F: 'static + Fn(&str) -> Message + Send,
@@ -142,46 +150,50 @@ where
 {
 	thread::spawn(move || {
 		let mut prev = f.read();
+		let mut i = 0;
+
 		for contents in f {
-			if contents != prev {
+			if contents != prev || i > 10 {
 				tx.send(content_fn(&contents)).unwrap();
 				prev = contents;
+				i = 0;
 			}
+			i += 1;
 		}
 	});
 }
 
 /// Given a percentage of charge, wrap the string `s` in an appropriate colour.
-fn wrap_in_colour(s: &str, percent: f32) -> String {
-	let colour = if percent > 0.5 {
-		format!("{:0>2x}ff00", 255 - (510.0 * (percent - 0.5)) as i32)
+fn wrap_in_colour(s: &str, fraction: f32) -> String {
+	let colour = if fraction > 0.5 {
+		format!("{:0>2x}ff00", 255 - (510.0 * (fraction - 0.5)) as i32)
 	} else {
-		format!("ff{:0>2x}00", (510.0 * percent) as i32)
+		format!("ff{:0>2x}00", (510.0 * fraction) as i32)
 	};
 	format!("<span foreground='#{}'>{}</span>", colour, s)
 }
 
 /// Given a percentage of charge, return an appropriate battery symbol.
-fn get_discharge_symbol(percent: f32) -> &'static str {
-	if percent > 0.90 {
+fn get_discharge_symbol(fraction: f32) -> &'static str {
+	if fraction > 0.90 {
 		" "
-	} else if percent > 0.60 {
+	} else if fraction > 0.60 {
 		" "
-	} else if percent > 0.40 {
+	} else if fraction > 0.40 {
 		" "
-	} else if percent > 0.10 {
+	} else if fraction > 0.10 {
 		" "
 	} else {
 		" "
 	}
 }
 
-fn get_symbol(status: Status, percent: f32) -> String {
+fn get_symbol(status: Status, fraction: f32) -> String {
 	let s = match status {
-		Status::Discharging => get_discharge_symbol(percent),
+		Status::Discharging => get_discharge_symbol(fraction),
 		_ => " ",
 	};
-	wrap_in_colour(s, percent)
+	wrap_in_colour(s, fraction)
 }
 
 /// Convert a float of minutes into a string of hours and minutes.
@@ -192,9 +204,13 @@ fn minutes_to_string(remain: f32) -> String {
 
 /// Start watching the appropriate files for changes and return their current
 /// contents.
-fn initialise(period: f32, tx: crossbeam_channel::Sender<Message>) -> (f32, Status) {
-	let mut charge_file = utils::monitor_file(format!("{}/{}", PATH, "charge_now"), period);
-	let mut status_file = utils::monitor_file(format!("{}/{}", PATH, "status"), period);
+fn initialise(
+	charge_prefix: &str,
+	period: f32,
+	tx: crossbeam_channel::Sender<Message>,
+) -> (f32, Status) {
+	let mut charge_file = utils::monitor_file(format!("{}/{}_now", PATH, charge_prefix), period);
+	let mut status_file = utils::monitor_file(format!("{}/status", PATH), period);
 
 	let current_charge = match str_to_charge(&charge_file.read()) {
 		Message::Charge(charge) => charge,
@@ -212,8 +228,8 @@ fn initialise(period: f32, tx: crossbeam_channel::Sender<Message>) -> (f32, Stat
 	(current_charge, current_status)
 }
 
-fn create_full_text(symbol: &str, percent: f32, remaining: &str) -> String {
-	format!("{}{:.0}% ({})", symbol, percent * 100.0, remaining)
+fn create_full_text(symbol: &str, fraction: f32, remaining: &str) -> String {
+	format!("{}{:.0}% ({})", symbol, fraction * 100.0, remaining)
 }
 
 #[cfg(test)]

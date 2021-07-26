@@ -31,7 +31,7 @@ fn default_update_signal() -> i32 {
 }
 
 impl Sender for Brightness {
-	fn add_sender(&self, s: crossbeam_channel::Sender<Message>) {
+	fn add_sender(&self, channel: crossbeam_channel::Sender<Message>) {
 		let name = self.get_name();
 		let mut block = Block::new(name.clone(), true);
 		let mut monitor = utils::monitor_command("brightnessctl", &["g"], self.period);
@@ -44,7 +44,7 @@ impl Sender for Brightness {
 			} else {
 				output
 			});
-			s.send((name.clone(), block.to_string())).unwrap();
+			channel.send((name.clone(), block.to_string())).unwrap();
 			recv.recv().unwrap();
 		});
 	}

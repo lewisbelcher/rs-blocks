@@ -47,7 +47,7 @@ impl Configure for Network {
 }
 
 impl Sender for Network {
-	fn add_sender(&self, s: crossbeam_channel::Sender<Message>) {
+	fn add_sender(&self, channel: crossbeam_channel::Sender<Message>) {
 		let name = self.get_name();
 		let rx_file = utils::monitor_file(self.rx_file.as_ref().unwrap().clone(), self.period);
 		let mut tx_file = utils::monitor_file(self.tx_file.as_ref().unwrap().clone(), self.period);
@@ -70,7 +70,7 @@ impl Sender for Network {
 						rx.calc_speed(),
 						tx.calc_speed()
 					));
-					s.send((name.clone(), block.to_string())).unwrap();
+					channel.send((name.clone(), block.to_string())).unwrap();
 				}
 			}
 		});
