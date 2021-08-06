@@ -3,7 +3,7 @@
 // All files in the project carrying such notice may not be copied, modified, or
 // distributed except according to those terms
 
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::{self, Read, Seek, SeekFrom};
 use std::num;
 use std::process::Command;
@@ -20,6 +20,11 @@ fn read_to_string(f: &mut File, mut buf: &mut String) -> io::Result<()> {
 /// Parse a string as a float32.
 pub fn str_to_f32(s: &str) -> Result<f32, num::ParseFloatError> {
 	s.trim().parse()
+}
+
+/// Parse a string as a float32.
+pub fn file_to_f32(path: &str) -> Result<f32, num::ParseFloatError> {
+	fs::read_to_string(path).unwrap().trim().parse()
 }
 
 /// A monitoring abstraction which will periodically call `reader` when iterated.
