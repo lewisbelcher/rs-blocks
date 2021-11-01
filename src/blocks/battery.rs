@@ -62,6 +62,7 @@ impl Sender for Battery {
 
 		thread::spawn(move || loop {
 			let message = rx.recv().unwrap();
+			log::debug!("{:?}", message);
 			let now = Instant::now();
 
 			match message {
@@ -77,7 +78,11 @@ impl Sender for Battery {
 							Status::Full => 0.0,
 							Status::Unknown => charge,
 						};
+						if charge == current_charge {
+							continue;
+						}
 						let rate = (charge - current_charge).abs() / elapsed;
+						log::info!("rate = {}", rate);
 						minutes_to_string(remaining.push(gap / rate))
 					};
 
