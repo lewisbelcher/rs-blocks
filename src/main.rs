@@ -18,6 +18,7 @@ period = 1
 "#;
 
 fn main() {
+	env_logger::init();
 	let cmd_args = args::collect();
 	let config = if let Some(path) = cmd_args.config {
 		fs::read_to_string(path).unwrap()
