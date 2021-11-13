@@ -6,6 +6,8 @@
 [![pipeline](https://gitlab.com/lewisbelcher/rs-blocks/badges/master/pipeline.svg)](https://gitlab.com/lewisbelcher/rs-blocks/pipelines)
 [![crate](https://img.shields.io/crates/v/rs-blocks.svg)](https://crates.io/crates/rs-blocks)
 
+![screenshot](static/screenshot.png)
+
 ## Background
 
 Linux window managers / compositors such as [`i3`](https://i3wm.org/) and
