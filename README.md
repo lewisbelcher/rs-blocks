@@ -1,6 +1,6 @@
 # Rust Blocks
 
-**A lightweight implementation for an i3 status bar written in Rust.**
+**A lightweight i3/sway status bar written in Rust.**
 
 [![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![pipeline](https://gitlab.com/lewisbelcher/rs-blocks/badges/master/pipeline.svg)](https://gitlab.com/lewisbelcher/rs-blocks/pipelines)
