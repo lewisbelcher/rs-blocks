@@ -18,4 +18,4 @@ pub mod network;
 pub mod time;
 pub mod volume;
 
-pub use block::{Block, Configure, Message, Sender};
+pub use block::{Block, Configure, Message, Sender, ValidatedPath};

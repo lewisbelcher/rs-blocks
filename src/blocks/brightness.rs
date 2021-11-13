@@ -27,7 +27,7 @@
 //!    something like `/sys/class/backlight/intel_backlight/max_brightness` for
 //!    intel based machines)
 
-use crate::blocks::{Block, Configure, Message, Sender};
+use crate::blocks::{Block, Configure, Message, Sender, ValidatedPath};
 use crate::utils;
 use serde::Deserialize;
 use std::thread;
@@ -41,9 +41,9 @@ pub struct Brightness {
 	#[serde(default = "default_update_signal")]
 	update_signal: i32,
 	#[serde(default = "default_path_to_current_brightness")]
-	path_to_current_brightness: String,
+	path_to_current_brightness: ValidatedPath,
 	#[serde(default = "default_path_to_max_brightness")]
-	path_to_max_brightness: String,
+	path_to_max_brightness: ValidatedPath,
 }
 
 fn default_name() -> String {
@@ -58,21 +58,22 @@ fn default_update_signal() -> i32 {
 	signal_hook::SIGUSR1
 }
 
-fn default_path_to_current_brightness() -> String {
-	"/sys/class/backlight/intel_backlight/brightness".to_string()
+fn default_path_to_current_brightness() -> ValidatedPath {
+	ValidatedPath("/sys/class/backlight/intel_backlight/brightness".to_string())
 }
 
-fn default_path_to_max_brightness() -> String {
-	"/sys/class/backlight/intel_backlight/max_brightness".to_string()
+fn default_path_to_max_brightness() -> ValidatedPath {
+	ValidatedPath("/sys/class/backlight/intel_backlight/max_brightness".to_string())
 }
 
 impl Sender for Brightness {
 	fn add_sender(&self, channel: crossbeam_channel::Sender<Message>) {
 		let name = self.get_name();
 		let mut block = Block::new(name.clone(), true);
-		let mut monitor = utils::monitor_file(self.path_to_current_brightness.clone(), self.period);
+		let mut monitor =
+			utils::monitor_file(self.path_to_current_brightness.0.clone(), self.period);
 		let recv = utils::wait_for_signal(self.update_signal, self.period);
-		let max = utils::file_to_f32(&self.path_to_max_brightness).unwrap() / 100.0;
+		let max = utils::file_to_f32(&self.path_to_max_brightness.0).unwrap() / 100.0;
 
 		thread::spawn(move || loop {
 			let output = monitor.read();

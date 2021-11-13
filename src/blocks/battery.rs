@@ -26,7 +26,7 @@
 //! - `path_to_status`: Path to file containing battery status (usually
 //!    something like `/sys/class/power_supply/BAT0/status`)
 
-use crate::blocks::{Block, Configure, Message as Msg, Sender};
+use crate::blocks::{Block, Configure, Message as BlockMessage, Sender, ValidatedPath};
 use crate::{ema, utils};
 use serde::Deserialize;
 use std::fs;
@@ -42,11 +42,11 @@ pub struct Battery {
 	#[serde(default = "default_alpha")]
 	alpha: f32,
 	#[serde(default = "default_path_to_charge_now")]
-	path_to_charge_now: String,
+	path_to_charge_now: ValidatedPath,
 	#[serde(default = "default_path_to_charge_full")]
-	path_to_charge_full: String,
+	path_to_charge_full: ValidatedPath,
 	#[serde(default = "default_path_to_status")]
-	path_to_status: String,
+	path_to_status: ValidatedPath,
 }
 
 fn default_name() -> String {
@@ -61,29 +61,29 @@ fn default_alpha() -> f32 {
 	0.8
 }
 
-fn default_path_to_charge_now() -> String {
-	"/sys/class/power_supply/BAT0/charge_now".to_string()
+fn default_path_to_charge_now() -> ValidatedPath {
+	ValidatedPath("/sys/class/power_supply/BAT0/charge_now".to_string())
 }
 
-fn default_path_to_charge_full() -> String {
-	"/sys/class/power_supply/BAT0/charge_full".to_string()
+fn default_path_to_charge_full() -> ValidatedPath {
+	ValidatedPath("/sys/class/power_supply/BAT0/charge_full".to_string())
 }
 
-fn default_path_to_status() -> String {
-	"/sys/class/power_supply/BAT0/status".to_string()
+fn default_path_to_status() -> ValidatedPath {
+	ValidatedPath("/sys/class/power_supply/BAT0/status".to_string())
 }
 
 impl Sender for Battery {
-	fn add_sender(&self, channel: crossbeam_channel::Sender<Msg>) {
+	fn add_sender(&self, channel: crossbeam_channel::Sender<BlockMessage>) {
 		let name = self.get_name();
-		let max = get_max_capacity(&self.path_to_charge_full);
+		let max = get_max_capacity(&self.path_to_charge_full.0);
 		let (tx, rx) = crossbeam_channel::unbounded();
 		let mut sremain = "...".to_string();
 		let mut last_status_change = 0;
 		let mut remaining = ema::Ema::new(self.alpha);
 		let (mut current_charge, mut current_status) = initialise(
-			&self.path_to_charge_now,
-			&self.path_to_status,
+			&self.path_to_charge_now.0,
+			&self.path_to_status.0,
 			self.period,
 			tx,
 		);

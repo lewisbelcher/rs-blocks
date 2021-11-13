@@ -6,6 +6,8 @@
 //! Base implementation and traits for all blocks.
 
 use serde::{Deserialize, Serialize};
+use std::convert::TryFrom;
+use std::path::Path;
 
 /// The type sent by a block to the main thread.
 pub type Message = (String, String);
@@ -75,6 +77,22 @@ pub trait Configure {
 /// channel when new updates for publishing are ready.
 pub trait Sender: Configure {
 	fn add_sender(&self, channel: crossbeam_channel::Sender<Message>);
+}
+
+#[derive(Deserialize)]
+#[serde(try_from = "String")]
+pub struct ValidatedPath(pub String);
+
+impl TryFrom<String> for ValidatedPath {
+	type Error = String;
+
+	fn try_from(value: String) -> Result<Self, Self::Error> {
+		if Path::new(&value).exists() {
+			Ok(ValidatedPath(value))
+		} else {
+			Err(format!("Path '{}' does not exist", value))
+		}
+	}
 }
 
 #[cfg(test)]

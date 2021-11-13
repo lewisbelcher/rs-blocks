@@ -28,7 +28,7 @@
 //!    (usually something like `/sys/class/net/<DEVICE>/statistics/tx_bytes`
 //!    where `<DEVICE>` is the network device to monitor)
 
-use crate::blocks::{Block, Configure, Message, Sender};
+use crate::blocks::{Block, Configure, Message, Sender, ValidatedPath};
 use crate::utils;
 use serde::Deserialize;
 use std::thread;
@@ -39,8 +39,8 @@ pub struct Network {
 	name: String,
 	#[serde(default = "default_period")]
 	period: f32,
-	path_to_rx: String,
-	path_to_tx: String,
+	path_to_rx: ValidatedPath,
+	path_to_tx: ValidatedPath,
 }
 
 fn default_name() -> String {
@@ -54,8 +54,8 @@ fn default_period() -> f32 {
 impl Sender for Network {
 	fn add_sender(&self, channel: crossbeam_channel::Sender<Message>) {
 		let name = self.get_name();
-		let rx_file = utils::monitor_file(self.path_to_rx.clone(), self.period);
-		let mut tx_file = utils::monitor_file(self.path_to_tx.clone(), self.period);
+		let rx_file = utils::monitor_file(self.path_to_rx.0.clone(), self.period);
+		let mut tx_file = utils::monitor_file(self.path_to_tx.0.clone(), self.period);
 		let coef = 1.0 / (self.period * 1024.0); // Report in kB
 		let mut rx = Speed::new(coef);
 		let mut tx = Speed::new(coef);
