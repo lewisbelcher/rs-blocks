@@ -3,20 +3,44 @@
 // All files in the project carrying such notice may not be copied, modified, or
 // distributed except according to those terms
 
+//! # Network block
+//!
+//! Use this block to get network monitoring in the status bar.
+//!
+//! Typical configuration:
+//!
+//! ```toml
+//! [network]
+//! path_to_rx = "/sys/class/net/wlan0/statistics/rx_bytes"
+//! path_to_tx = "/sys/class/net/wlan0/statistics/tx_bytes"
+//! ```
+//!
+//! ## Configuration options
+//!
+//! - `name`: Name of the block (must be unique)
+//! - `period`: Default update period in seconds (extra updates may occur on
+//!    event changes etc)
+//! - `alpha`: Weight for the exponential moving average of value updates
+//! - `path_to_rx`: Path to the file to monitor for network receiving traffic
+//!    (usually something like `/sys/class/net/<DEVICE>/statistics/rx_bytes`
+//!    where `<DEVICE>` is the network device to monitor)
+//! - `path_to_tx`: Path to the file to monitor for network transmission traffic
+//!    (usually something like `/sys/class/net/<DEVICE>/statistics/tx_bytes`
+//!    where `<DEVICE>` is the network device to monitor)
+
 use crate::blocks::{Block, Configure, Message, Sender};
 use crate::utils;
 use serde::Deserialize;
 use std::thread;
 
-#[derive(Deserialize)]
+#[derive(Configure, Deserialize)]
 pub struct Network {
 	#[serde(default = "default_name")]
 	name: String,
 	#[serde(default = "default_period")]
 	period: f32,
-	device: String,
-	rx_file: Option<String>,
-	tx_file: Option<String>,
+	path_to_rx: String,
+	path_to_tx: String,
 }
 
 fn default_name() -> String {
@@ -27,30 +51,11 @@ fn default_period() -> f32 {
 	1.0
 }
 
-fn get_network_file(device: &str, direction: &str) -> String {
-	format!("/sys/class/net/{}/statistics/{}_bytes", device, direction)
-}
-
-impl Configure for Network {
-	fn post_deserialise(mut instance: Self) -> Self
-	where
-		Self: Sized,
-	{
-		instance.rx_file = Some(get_network_file(&instance.device, "rx"));
-		instance.tx_file = Some(get_network_file(&instance.device, "tx"));
-		instance
-	}
-
-	fn get_name(&self) -> String {
-		self.name.clone()
-	}
-}
-
 impl Sender for Network {
 	fn add_sender(&self, channel: crossbeam_channel::Sender<Message>) {
 		let name = self.get_name();
-		let rx_file = utils::monitor_file(self.rx_file.as_ref().unwrap().clone(), self.period);
-		let mut tx_file = utils::monitor_file(self.tx_file.as_ref().unwrap().clone(), self.period);
+		let rx_file = utils::monitor_file(self.path_to_rx.clone(), self.period);
+		let mut tx_file = utils::monitor_file(self.path_to_tx.clone(), self.period);
 		let coef = 1.0 / (self.period * 1024.0); // Report in kB
 		let mut rx = Speed::new(coef);
 		let mut tx = Speed::new(coef);

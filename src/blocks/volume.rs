@@ -3,6 +3,24 @@
 // All files in the project carrying such notice may not be copied, modified, or
 // distributed except according to those terms
 
+//! # Volume block
+//!
+//! Use this block to get volume monitoring in the status bar.
+//!
+//! Typical configuration:
+//!
+//! ```toml
+//! [volume]
+//! ```
+//!
+//! ## Configuration options
+//!
+//! - `name`: Name of the block (must be unique)
+//! - `period`: Default update period in seconds (extra updates may occur on
+//!    event changes etc)
+//! - `update_signal`: Used to define what signal to listen on for immediate
+//!    retriggering of updates
+
 use crate::blocks::{Block, Configure, Message, Sender};
 use crate::utils;
 use serde::Deserialize;

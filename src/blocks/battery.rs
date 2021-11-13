@@ -3,14 +3,35 @@
 // All files in the project carrying such notice may not be copied, modified, or
 // distributed except according to those terms
 
+//! # Battery block
+//!
+//! Use this block to get battery monitoring in the status bar.
+//!
+//! Typical configuration:
+//!
+//! ```toml
+//! [battery]
+//! ```
+//!
+//! ## Configuration options
+//!
+//! - `name`: Name of the block (must be unique)
+//! - `period`: Default update period in seconds (extra updates may occur on
+//!    event changes etc)
+//! - `alpha`: Weight for the exponential moving average of value updates
+//! - `path_to_charge_now`: Path to file containing current charge (usually
+//!    something like `/sys/class/power_supply/BAT0/charge_now`)
+//! - `path_to_charge_full`: Path to file containing charge value when full
+//!    (usually something like `/sys/class/power_supply/BAT0/charge_full`)
+//! - `path_to_status`: Path to file containing battery status (usually
+//!    something like `/sys/class/power_supply/BAT0/status`)
+
 use crate::blocks::{Block, Configure, Message as Msg, Sender};
 use crate::{ema, utils};
 use serde::Deserialize;
 use std::fs;
 use std::thread;
 use std::time::Instant;
-
-const PATH: &str = "/sys/class/power_supply/BAT0";
 
 #[derive(Configure, Deserialize)]
 pub struct Battery {
@@ -20,8 +41,12 @@ pub struct Battery {
 	period: f32,
 	#[serde(default = "default_alpha")]
 	alpha: f32,
-	#[serde(default = "default_charge_prefix")]
-	charge_prefix: String,
+	#[serde(default = "default_path_to_charge_now")]
+	path_to_charge_now: String,
+	#[serde(default = "default_path_to_charge_full")]
+	path_to_charge_full: String,
+	#[serde(default = "default_path_to_status")]
+	path_to_status: String,
 }
 
 fn default_name() -> String {
@@ -36,20 +61,32 @@ fn default_alpha() -> f32 {
 	0.8
 }
 
-fn default_charge_prefix() -> String {
-	"charge".to_string()
+fn default_path_to_charge_now() -> String {
+	"/sys/class/power_supply/BAT0/charge_now".to_string()
+}
+
+fn default_path_to_charge_full() -> String {
+	"/sys/class/power_supply/BAT0/charge_full".to_string()
+}
+
+fn default_path_to_status() -> String {
+	"/sys/class/power_supply/BAT0/status".to_string()
 }
 
 impl Sender for Battery {
 	fn add_sender(&self, channel: crossbeam_channel::Sender<Msg>) {
 		let name = self.get_name();
-		let max = get_max_capacity(&self.charge_prefix);
+		let max = get_max_capacity(&self.path_to_charge_full);
 		let (tx, rx) = crossbeam_channel::unbounded();
 		let mut sremain = "...".to_string();
 		let mut last_status_change = 0;
 		let mut remaining = ema::Ema::new(self.alpha);
-		let (mut current_charge, mut current_status) =
-			initialise(&self.charge_prefix, self.period, tx);
+		let (mut current_charge, mut current_status) = initialise(
+			&self.path_to_charge_now,
+			&self.path_to_status,
+			self.period,
+			tx,
+		);
 		let mut then = Instant::now();
 		let mut fraction = (current_charge / max).min(1.0);
 		let mut block = Block::new(name.clone(), true);
@@ -110,9 +147,9 @@ impl Sender for Battery {
 	}
 }
 
-fn get_max_capacity(charge_prefix: &str) -> f32 {
-	let path = format!("{}/{}_full", PATH, charge_prefix);
-	utils::str_to_f32(&fs::read_to_string(&path).unwrap()).unwrap()
+fn get_max_capacity(path: &str) -> f32 {
+	let contents = fs::read_to_string(&path).expect(&format!("Could not read path '{}'", path));
+	utils::str_to_f32(&contents).expect(&format!("Could not parse contents of '{}'", path))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -210,12 +247,13 @@ fn minutes_to_string(remain: f32) -> String {
 /// Start watching the appropriate files for changes and return their current
 /// contents.
 fn initialise(
-	charge_prefix: &str,
+	path_to_charge_now: &str,
+	path_to_status: &str,
 	period: f32,
 	tx: crossbeam_channel::Sender<Message>,
 ) -> (f32, Status) {
-	let mut charge_file = utils::monitor_file(format!("{}/{}_now", PATH, charge_prefix), period);
-	let mut status_file = utils::monitor_file(format!("{}/status", PATH), period);
+	let mut charge_file = utils::monitor_file(path_to_charge_now.to_string(), period);
+	let mut status_file = utils::monitor_file(path_to_status.to_string(), period);
 
 	let current_charge = match str_to_charge(&charge_file.read()) {
 		Message::Charge(charge) => charge,

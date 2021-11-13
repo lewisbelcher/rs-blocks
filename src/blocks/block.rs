@@ -3,6 +3,8 @@
 // All files in the project carrying such notice may not be copied, modified, or
 // distributed except according to those terms
 
+//! Base implementation and traits for all blocks.
+
 use serde::{Deserialize, Serialize};
 
 /// The type sent by a block to the main thread.
@@ -61,17 +63,7 @@ pub trait Configure {
 	where
 		Self: Sized + Deserialize<'a>,
 	{
-		let instance: Self =
-			toml::from_str(config).expect(&format!("Invalid config for block: {}", config));
-		Self::post_deserialise(instance)
-	}
-
-	#[allow(unused_mut)] // `post_deserialise` doesn't mutate, but it's implementers might
-	fn post_deserialise(mut instance: Self) -> Self
-	where
-		Self: Sized,
-	{
-		instance
+		toml::from_str(config).expect(&format!("Invalid config for block '{}'", config))
 	}
 
 	fn get_name(&self) -> String;

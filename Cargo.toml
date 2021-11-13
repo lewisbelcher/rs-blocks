@@ -1,6 +1,6 @@
 [package]
 name = "rs-blocks"
-version = "0.3.0"
+version = "1.0.0"
 authors = ["Lewis Belcher <belcher_lewis@protonmail.com>"]
 edition = "2018"
 description = "A lightweight i3/sway status bar written in Rust."

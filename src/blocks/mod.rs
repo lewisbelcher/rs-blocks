@@ -3,6 +3,9 @@
 // All files in the project carrying such notice may not be copied, modified, or
 // distributed except according to those terms
 
+//! Collection of all blocks for use in status bar. See each module for example
+//! configurations and options.
+
 // derive proc_macro from exernal crate:
 pub use rs_blocks_derive::Configure;
 

@@ -3,6 +3,25 @@
 // All files in the project carrying such notice may not be copied, modified, or
 // distributed except according to those terms
 
+//! # CPU block
+//!
+//! Use this block to get CPU monitoring in the status bar.
+//!
+//! This block reads from `/proc/stat` to calculate CPU usage.
+//!
+//! Typical configuration:
+//!
+//! ```toml
+//! [cpu]
+//! ```
+//!
+//! ## Configuration options
+//!
+//! - `name`: Name of the block (must be unique)
+//! - `period`: Default update period in seconds (extra updates may occur on
+//!    event changes etc)
+//! - `alpha`: Weight for the exponential moving average of value updates
+
 use crate::blocks::{Block, Configure, Message, Sender};
 use crate::{ema, utils};
 use regex::Regex;

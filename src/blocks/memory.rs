@@ -3,6 +3,24 @@
 // All files in the project carrying such notice may not be copied, modified, or
 // distributed except according to those terms
 
+//! # Memory block
+//!
+//! Use this block to get memory monitoring in the status bar. Reads from
+//! `/proc/meminfo` to calculate memory usage.
+//!
+//! Typical configuration:
+//!
+//! ```toml
+//! [memory]
+//! ```
+//!
+//! ## Configuration options
+//!
+//! - `name`: Name of the block (must be unique)
+//! - `period`: Default update period in seconds (extra updates may occur on
+//!    event changes etc)
+//! - `alpha`: Weight for the exponential moving average of value updates
+
 use crate::blocks::{Block, Configure, Message, Sender};
 use crate::{ema, utils};
 use regex::Regex;
