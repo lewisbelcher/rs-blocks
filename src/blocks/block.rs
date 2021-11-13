@@ -1,4 +1,4 @@
-// Copyright ⓒ 2019-2020 Lewis Belcher
+// Copyright ⓒ 2019-2021 Lewis Belcher
 // Licensed under the MIT license (see LICENSE or <http://opensource.org/licenses/MIT>).
 // All files in the project carrying such notice may not be copied, modified, or
 // distributed except according to those terms
@@ -52,21 +52,21 @@ impl Block {
 	}
 }
 
-/// Configure trait for a block sender.
+/// Configure trait for blocks.
 ///
 /// Configuration is in toml format sent as a string so that each block
 /// sender can deserialise it in its own way.
-#[allow(unused_mut)] // `post_deserialise` doesn't mutate, but it's implementers might
 pub trait Configure {
 	fn new<'a>(config: &'a str) -> Self
 	where
 		Self: Sized + Deserialize<'a>,
 	{
-		let mut instance: Self =
+		let instance: Self =
 			toml::from_str(config).expect(&format!("Invalid config for block: {}", config));
 		Self::post_deserialise(instance)
 	}
 
+	#[allow(unused_mut)] // `post_deserialise` doesn't mutate, but it's implementers might
 	fn post_deserialise(mut instance: Self) -> Self
 	where
 		Self: Sized,

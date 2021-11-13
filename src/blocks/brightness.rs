@@ -1,7 +1,17 @@
-// Copyright ⓒ 2019-2020 Lewis Belcher
+// Copyright ⓒ 2019-2021 Lewis Belcher
 // Licensed under the MIT license (see LICENSE or <http://opensource.org/licenses/MIT>).
 // All files in the project carrying such notice may not be copied, modified, or
 // distributed except according to those terms
+
+//! # Brightness block
+//!
+//! A typical config would be:
+//!
+//! ```txt
+//! [brightness]
+//! path_to_current_brightness = "/sys/class/backlight/intel_backlight/brightness"
+//! path_to_max_brightness = "/sys/class/backlight/intel_backlight/max_brightness"
+//! ```
 
 use crate::blocks::{Block, Configure, Message, Sender};
 use crate::utils;
