@@ -1,4 +1,5 @@
 //! Exposes a simple proc macro for automatically getting the name of a block.
+//! Target usage is the [rs-blocks](https://crates.io/crates/rs-blocks) project.
 
 extern crate proc_macro;
 use proc_macro::TokenStream;
