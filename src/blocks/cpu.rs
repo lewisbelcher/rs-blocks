@@ -54,7 +54,7 @@ fn default_alpha() -> f32 {
 }
 
 impl Sender for Cpu {
-	fn add_sender(&self, channel: crossbeam_channel::Sender<Message>) {
+	fn add_sender(&self, channel: crossbeam_channel::Sender<Message>) -> anyhow::Result<()> {
 		let name = self.get_name();
 		let monitor = utils::monitor_file(PATH.to_string(), self.period);
 		let mut perc = ema::Ema::new(self.alpha);
@@ -75,6 +75,8 @@ impl Sender for Cpu {
 				cpu = current_cpu;
 			}
 		});
+
+		Ok(())
 	}
 }
 
@@ -105,5 +107,6 @@ fn match_proc(s: &str) -> regex::Captures {
 	lazy_static! {
 		static ref RE: Regex = Regex::new(PATTERN).unwrap();
 	}
-	RE.captures(s).unwrap()
+	RE.captures(s)
+		.expect(&format!("Failed to match /proc/stat contents '{}'", s))
 }

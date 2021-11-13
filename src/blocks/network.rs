@@ -52,7 +52,7 @@ fn default_period() -> f32 {
 }
 
 impl Sender for Network {
-	fn add_sender(&self, channel: crossbeam_channel::Sender<Message>) {
+	fn add_sender(&self, channel: crossbeam_channel::Sender<Message>) -> anyhow::Result<()> {
 		let name = self.get_name();
 		let rx_file = utils::monitor_file(self.path_to_rx.0.clone(), self.period);
 		let mut tx_file = utils::monitor_file(self.path_to_tx.0.clone(), self.period);
@@ -79,6 +79,8 @@ impl Sender for Network {
 				}
 			}
 		});
+
+		Ok(())
 	}
 }
 

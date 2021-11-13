@@ -28,6 +28,7 @@
 
 use crate::blocks::{Block, Configure, Message as BlockMessage, Sender, ValidatedPath};
 use crate::{ema, utils};
+use anyhow::Context;
 use serde::Deserialize;
 use std::fs;
 use std::thread;
@@ -74,9 +75,9 @@ fn default_path_to_status() -> ValidatedPath {
 }
 
 impl Sender for Battery {
-	fn add_sender(&self, channel: crossbeam_channel::Sender<BlockMessage>) {
+	fn add_sender(&self, channel: crossbeam_channel::Sender<BlockMessage>) -> anyhow::Result<()> {
 		let name = self.get_name();
-		let max = get_max_capacity(&self.path_to_charge_full.0);
+		let max = get_max_capacity(&self.path_to_charge_full.0)?;
 		let (tx, rx) = crossbeam_channel::unbounded();
 		let mut sremain = "...".to_string();
 		let mut last_status_change = 0;
@@ -86,7 +87,7 @@ impl Sender for Battery {
 			&self.path_to_status.0,
 			self.period,
 			tx,
-		);
+		)?;
 		let mut then = Instant::now();
 		let mut fraction = (current_charge / max).min(1.0);
 		let mut block = Block::new(name.clone(), true);
@@ -144,12 +145,14 @@ impl Sender for Battery {
 			block.full_text = Some(create_full_text(&symbol, fraction, &sremain));
 			channel.send((name.clone(), block.to_string())).unwrap();
 		});
+
+		Ok(())
 	}
 }
 
-fn get_max_capacity(path: &str) -> f32 {
-	let contents = fs::read_to_string(&path).expect(&format!("Could not read path '{}'", path));
-	utils::str_to_f32(&contents).expect(&format!("Could not parse contents of '{}'", path))
+fn get_max_capacity(path: &str) -> anyhow::Result<f32> {
+	let contents = fs::read_to_string(&path).context(format!("Could not read path '{}'", path))?;
+	utils::str_to_f32(&contents).context(format!("Could not parse contents of '{}'", path))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -167,27 +170,31 @@ enum Message {
 }
 
 /// Convert a string to a status.
-fn str_to_status(s: &str) -> Message {
+fn str_to_status(s: &str) -> anyhow::Result<Message> {
 	match s.trim() {
-		"Charging" => Message::Status(Status::Charging),
-		"Discharging" => Message::Status(Status::Discharging),
-		"Full" => Message::Status(Status::Full),
-		"Unknown" => Message::Status(Status::Unknown),
-		_ => panic!("Unknown status {}", s),
+		"Charging" => Ok(Message::Status(Status::Charging)),
+		"Discharging" => Ok(Message::Status(Status::Discharging)),
+		"Full" => Ok(Message::Status(Status::Full)),
+		"Unknown" => Ok(Message::Status(Status::Unknown)),
+		_ => anyhow::bail!("Unknown status {}", s),
 	}
 }
 
 /// Convert a string to a charge enum.
-fn str_to_charge(s: &str) -> Message {
-	Message::Charge(s.trim().parse().unwrap())
+fn str_to_charge(s: &str) -> anyhow::Result<Message> {
+	let value = s
+		.trim()
+		.parse()
+		.context(format!("Unexpected value for charge '{}'", s))?;
+	Ok(Message::Charge(value))
 }
 
 /// Continuously monitor `f` for changes, when a change occurs or more than 10
-/// checks have occurred, pipe its contents through `content_fn` and send the
+/// checks have occurred, pipe its contents through `parse_fn` and send the
 /// results over the sender `tx`.
-fn looper<F, T>(tx: crossbeam_channel::Sender<Message>, mut f: utils::Monitor<T>, content_fn: F)
+fn looper<F, T>(tx: crossbeam_channel::Sender<Message>, mut f: utils::Monitor<T>, parse_fn: F)
 where
-	F: 'static + Fn(&str) -> Message + Send,
+	F: 'static + Fn(&str) -> anyhow::Result<Message> + Send,
 	T: 'static + FnMut() -> String + Send,
 {
 	thread::spawn(move || {
@@ -196,7 +203,11 @@ where
 
 		for contents in f {
 			if contents != prev || i > 10 {
-				tx.send(content_fn(&contents)).unwrap();
+				let parsed = parse_fn(&contents).expect(&format!(
+					"Encountered bad value in battery file: '{}'",
+					contents
+				));
+				tx.send(parsed).unwrap();
 				prev = contents;
 				i = 0;
 			}
@@ -251,24 +262,24 @@ fn initialise(
 	path_to_status: &str,
 	period: f32,
 	tx: crossbeam_channel::Sender<Message>,
-) -> (f32, Status) {
+) -> anyhow::Result<(f32, Status)> {
 	let mut charge_file = utils::monitor_file(path_to_charge_now.to_string(), period);
 	let mut status_file = utils::monitor_file(path_to_status.to_string(), period);
 
-	let current_charge = match str_to_charge(&charge_file.read()) {
-		Message::Charge(charge) => charge,
-		_ => panic!("Unexpected contents of charge"),
+	let current_charge = match str_to_charge(&charge_file.read())? {
+		Message::Charge(value) => value,
+		_ => unreachable!(),
 	};
 
-	let current_status = match str_to_status(&status_file.read()) {
-		Message::Status(status) => status,
-		_ => panic!("Unexpected contents of status"),
+	let current_status = match str_to_status(&status_file.read())? {
+		Message::Status(value) => value,
+		_ => unreachable!(),
 	};
 
 	looper(tx.clone(), charge_file, str_to_charge);
 	looper(tx.clone(), status_file, str_to_status);
 
-	(current_charge, current_status)
+	Ok((current_charge, current_status))
 }
 
 fn create_full_text(symbol: &str, fraction: f32, remaining: &str) -> String {

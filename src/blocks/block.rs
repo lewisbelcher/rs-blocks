@@ -5,6 +5,7 @@
 
 //! Base implementation and traits for all blocks.
 
+use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use std::path::Path;
@@ -61,11 +62,11 @@ impl Block {
 /// Configuration is in toml format sent as a string so that each block
 /// sender can deserialise it in its own way.
 pub trait Configure {
-	fn new<'a>(config: &'a str) -> Self
+	fn new<'a>(config: &'a str) -> anyhow::Result<Self>
 	where
 		Self: Sized + Deserialize<'a>,
 	{
-		toml::from_str(config).expect(&format!("Invalid config for block '{}'", config))
+		toml::from_str(config).context(format!("Invalid config block '{}'", config))
 	}
 
 	fn get_name(&self) -> String;
@@ -76,7 +77,7 @@ pub trait Configure {
 /// A block must implement creating a closure which sends messages over a
 /// channel when new updates for publishing are ready.
 pub trait Sender: Configure {
-	fn add_sender(&self, channel: crossbeam_channel::Sender<Message>);
+	fn add_sender(&self, channel: crossbeam_channel::Sender<Message>) -> anyhow::Result<()>;
 }
 
 #[derive(Deserialize)]

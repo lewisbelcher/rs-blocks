@@ -49,7 +49,7 @@ fn default_format() -> String {
 }
 
 impl Sender for Time {
-	fn add_sender(&self, channel: crossbeam_channel::Sender<Message>) {
+	fn add_sender(&self, channel: crossbeam_channel::Sender<Message>) -> anyhow::Result<()> {
 		let name = self.get_name();
 		let format = self.format.clone();
 		let period = self.period;
@@ -60,5 +60,7 @@ impl Sender for Time {
 			channel.send((name.clone(), block.to_string())).unwrap();
 			thread::sleep(Duration::from_secs_f32(period));
 		});
+
+		Ok(())
 	}
 }

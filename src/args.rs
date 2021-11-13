@@ -3,7 +3,6 @@
 // All files in the project carrying such notice may not be copied, modified, or
 // distributed except according to those terms
 
-use std::process;
 use clap::{crate_version, App, Arg};
 use std::path::{Path, PathBuf};
 
@@ -28,7 +27,7 @@ pub fn collect() -> Args {
 	Args {
 		config: matches
 			.value_of("config")
-			.map_or_else(default_config, check_config)
+			.map_or_else(default_config, |x| Some(Path::new(x).to_path_buf())),
 	}
 }
 
@@ -43,14 +42,4 @@ fn default_config() -> Option<PathBuf> {
 		}
 	}
 	None
-}
-
-/// Check the given config is an existing file
-fn check_config(path: &str) -> Option<PathBuf> {
-	let path = Path::new(path);
-	if !path.is_file() {
-		eprintln!("No such file: {}", path.display());
-		process::exit(1);
-	}
-	Some(path.to_path_buf())
 }

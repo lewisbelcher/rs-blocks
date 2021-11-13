@@ -53,7 +53,7 @@ fn default_alpha() -> f32 {
 }
 
 impl Sender for Memory {
-	fn add_sender(&self, channel: crossbeam_channel::Sender<Message>) {
+	fn add_sender(&self, channel: crossbeam_channel::Sender<Message>) -> anyhow::Result<()> {
 		let name = self.get_name();
 		let monitor = utils::monitor_file(MEMPATH.to_string(), self.period);
 		let mut mem = ema::Ema::new(self.alpha);
@@ -66,6 +66,8 @@ impl Sender for Memory {
 				channel.send((name.clone(), block.to_string())).unwrap();
 			}
 		});
+
+		Ok(())
 	}
 }
 

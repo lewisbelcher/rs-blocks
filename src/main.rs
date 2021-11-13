@@ -3,13 +3,13 @@
 // All files in the project carrying such notice may not be copied, modified, or
 // distributed except according to those terms
 
+use anyhow::Context;
 use rs_blocks::args;
 use rs_blocks::blocks::{
 	battery, brightness, cpu, memory, network, time, volume, Configure, Sender,
 };
 use std::collections::HashMap;
 use std::fs;
-use std::process;
 
 const DEFAULT_CONFIG: &'static str = r#"
 [time]
@@ -17,11 +17,12 @@ format = "%a %d %b <b>%H:%M:%S</b>"
 period = 1
 "#;
 
-fn main() {
+fn main() -> anyhow::Result<()> {
 	env_logger::init();
 	let cmd_args = args::collect();
 	let config = if let Some(path) = cmd_args.config {
-		fs::read_to_string(path).unwrap()
+		fs::read_to_string(&path)
+			.context(format!("Failed to read config file '{}'", path.display()))?
 	} else {
 		DEFAULT_CONFIG.to_string()
 	};
@@ -30,9 +31,9 @@ fn main() {
 	let mut order = Vec::new();
 
 	for (block_type, config) in parse_config(&config) {
-		let sender = create_sender(&block_type, config.to_string());
+		let sender = create_sender(&block_type, config.to_string())?;
 		order.push(sender.get_name());
-		sender.add_sender(s.clone());
+		sender.add_sender(s.clone())?;
 	}
 
 	let mut blocks = HashMap::new();
@@ -46,18 +47,17 @@ fn main() {
 }
 
 /// Create a sender object for a given config.
-fn create_sender(name: &str, config: String) -> Box<dyn Sender> {
+fn create_sender(name: &str, config: String) -> anyhow::Result<Box<dyn Sender>> {
 	match name {
-		"battery" => Box::new(battery::Battery::new(&config)),
-		"brightness" => Box::new(brightness::Brightness::new(&config)),
-		"cpu" => Box::new(cpu::Cpu::new(&config)),
-		"memory" => Box::new(memory::Memory::new(&config)),
-		"network" => Box::new(network::Network::new(&config)),
-		"time" => Box::new(time::Time::new(&config)),
-		"volume" => Box::new(volume::Volume::new(&config)),
+		"battery" => Ok(Box::new(battery::Battery::new(&config)?)),
+		"brightness" => Ok(Box::new(brightness::Brightness::new(&config)?)),
+		"cpu" => Ok(Box::new(cpu::Cpu::new(&config)?)),
+		"memory" => Ok(Box::new(memory::Memory::new(&config)?)),
+		"network" => Ok(Box::new(network::Network::new(&config)?)),
+		"time" => Ok(Box::new(time::Time::new(&config)?)),
+		"volume" => Ok(Box::new(volume::Volume::new(&config)?)),
 		_ => {
-			eprintln!("Unrecognised config element '{}'", name);
-			process::exit(1);
+			anyhow::bail!("Unrecognised config element '{}'", name)
 		}
 	}
 }

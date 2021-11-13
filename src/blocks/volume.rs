@@ -49,7 +49,7 @@ fn default_update_signal() -> i32 {
 }
 
 impl Sender for Volume {
-	fn add_sender(&self, s: crossbeam_channel::Sender<Message>) {
+	fn add_sender(&self, s: crossbeam_channel::Sender<Message>) -> anyhow::Result<()> {
 		let name = self.get_name();
 		let re = regex::Regex::new(r"(?P<mute>\d)\n(?P<volume>\d+)").unwrap();
 		let mut block = Block::new(self.name.clone(), true);
@@ -70,5 +70,7 @@ impl Sender for Volume {
 			s.send((name.clone(), block.to_string())).unwrap();
 			recv.recv().unwrap();
 		});
+
+		Ok(())
 	}
 }

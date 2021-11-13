@@ -71,7 +71,8 @@ where
 }
 
 /// Monitor a file at a given path. When iterated it's contents are periodically
-/// read.
+/// read. NB the file should already have been verified to exist at this point,
+/// so we should safe to expect that it still does.
 pub fn monitor_file(path: String, period: f32) -> Monitor<impl FnMut() -> String> {
 	let mut file = File::open(&path).unwrap();
 	let mut buf = String::new();

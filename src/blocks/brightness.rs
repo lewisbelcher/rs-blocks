@@ -67,13 +67,13 @@ fn default_path_to_max_brightness() -> ValidatedPath {
 }
 
 impl Sender for Brightness {
-	fn add_sender(&self, channel: crossbeam_channel::Sender<Message>) {
+	fn add_sender(&self, channel: crossbeam_channel::Sender<Message>) -> anyhow::Result<()> {
 		let name = self.get_name();
 		let mut block = Block::new(name.clone(), true);
 		let mut monitor =
 			utils::monitor_file(self.path_to_current_brightness.0.clone(), self.period);
 		let recv = utils::wait_for_signal(self.update_signal, self.period);
-		let max = utils::file_to_f32(&self.path_to_max_brightness.0).unwrap() / 100.0;
+		let max = utils::file_to_f32(&self.path_to_max_brightness.0)? / 100.0;
 
 		thread::spawn(move || loop {
 			let output = monitor.read();
@@ -85,5 +85,7 @@ impl Sender for Brightness {
 			channel.send((name.clone(), block.to_string())).unwrap();
 			recv.recv().unwrap();
 		});
+
+		Ok(())
 	}
 }
