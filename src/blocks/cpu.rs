@@ -110,3 +110,14 @@ fn match_proc(s: &str) -> regex::Captures {
 	RE.captures(s)
 		.expect(&format!("Failed to match /proc/stat contents '{}'", s))
 }
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	const STATFILE: &str = "cpu  237476 0 85111 17267319 2310 34402 4846 0 0 0\n";
+
+	#[test]
+	fn regex_matches() {
+		match_proc(&STATFILE);
+	}
+}
