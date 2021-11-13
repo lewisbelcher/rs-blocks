@@ -3,29 +3,20 @@
 // All files in the project carrying such notice may not be copied, modified, or
 // distributed except according to those terms
 
-use std::fs::OpenOptions;
-use std::io::prelude::*;
-use std::path::{Path};
-
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
-use rs_blocks::file::MonitorFile;
+use rs_blocks::utils;
 
-fn read_file(path: &Path) -> Result<String, ()> {
-	let mut f = OpenOptions::new().read(true).open(path).unwrap();
-	let mut content = String::new();
-	f.read_to_string(&mut content).unwrap();
-	content.pop();
-	Ok(content)
+fn read_file(path: &str) {
+	std::fs::read_to_string(path).unwrap();
 }
 
 fn bench_file_readers(c: &mut Criterion) {
-	let path = "/sys/class/net/wlp2s0/statistics/rx_bytes";
+	let path = "/sys/class/net/wlan0/statistics/rx_bytes";
 
-	let device_path = Path::new(path);
-	c.bench_function("reopen file", |b| b.iter(|| read_file(black_box(device_path))));
+	c.bench_function("reopen file", |b| b.iter(|| read_file(black_box(path))));
 
-	let mut f = MonitorFile::new(path, 4);
+	let mut f = utils::monitor_file(path.to_string(), 4.0);
 	c.bench_function("buffered file", |b| b.iter(|| f.read()));
 }
 
