@@ -1,3 +1,5 @@
+//! Exposes a simple proc macro for automatically getting the name of a block.
+
 extern crate proc_macro;
 use proc_macro::TokenStream;
 
