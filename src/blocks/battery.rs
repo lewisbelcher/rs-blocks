@@ -91,10 +91,10 @@ impl Sender for Battery {
 		let mut then = Instant::now();
 		let mut fraction = (current_charge / max).min(1.0);
 		let mut block = Block::new(name.clone(), true);
-		let mut symbol = get_symbol(current_status, fraction);
+		let symbol = get_symbol(current_status, fraction);
 
 		if current_status == Status::Full {
-			block.full_text = Some(create_full_text(&symbol, fraction, "Full"));
+			block.full_text = Some(create_full_text(symbol, fraction, "Full"));
 			channel.send((name.clone(), block.to_string())).unwrap();
 		}
 
@@ -140,9 +140,8 @@ impl Sender for Battery {
 			if current_status == Status::Full {
 				sremain = "Full".to_string();
 			}
-			symbol = get_symbol(current_status, fraction);
-
-			block.full_text = Some(create_full_text(&symbol, fraction, &sremain));
+			let symbol = get_symbol(current_status, fraction);
+			block.full_text = Some(create_full_text(symbol, fraction, &sremain));
 			channel.send((name.clone(), block.to_string())).unwrap();
 		});
 
@@ -282,7 +281,7 @@ fn initialise(
 	Ok((current_charge, current_status))
 }
 
-fn create_full_text(symbol: &str, fraction: f32, remaining: &str) -> String {
+fn create_full_text(symbol: String, fraction: f32, remaining: &str) -> String {
 	format!("{}{:.0}% ({})", symbol, fraction * 100.0, remaining)
 }
 
