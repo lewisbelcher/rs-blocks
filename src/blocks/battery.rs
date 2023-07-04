@@ -114,6 +114,7 @@ impl Sender for Battery {
 							Status::Charging => max - charge,
 							Status::Discharging => charge,
 							Status::Full => 0.0,
+							Status::NotCharging => charge,
 							Status::Unknown => charge,
 						};
 						if charge == current_charge {
@@ -159,6 +160,7 @@ enum Status {
 	Charging,
 	Discharging,
 	Full,
+	NotCharging,
 	Unknown,
 }
 
@@ -170,10 +172,12 @@ enum Message {
 
 /// Convert a string to a status.
 fn str_to_status(s: &str) -> anyhow::Result<Message> {
-	match s.trim() {
+	let s = s.trim();
+	match s {
 		"Charging" => Ok(Message::Status(Status::Charging)),
 		"Discharging" => Ok(Message::Status(Status::Discharging)),
 		"Full" => Ok(Message::Status(Status::Full)),
+		"Not charging" => Ok(Message::Status(Status::NotCharging)),
 		"Unknown" => Ok(Message::Status(Status::Unknown)),
 		_ => anyhow::bail!("Unknown status {}", s),
 	}
@@ -201,6 +205,7 @@ where
 		let mut i = 0;
 
 		for contents in f {
+			log::debug!("Contents: {}", contents);
 			if contents != prev || i > 10 {
 				let parsed = parse_fn(&contents).expect(&format!(
 					"Encountered bad value in battery file: '{}'",
