@@ -249,8 +249,14 @@ fn get_symbol(status: Status, fraction: f32) -> String {
 }
 
 /// Convert a float of minutes into a string of hours and minutes.
-fn minutes_to_string(remain: f32) -> String {
-	let (hrs, mins) = (remain / 60.0, remain % 60.0);
+fn minutes_to_string(total: f32) -> String {
+	let (mut hrs, mut mins) = (total / 60.0, total % 60.0);
+	if mins >= 59.5 {
+		hrs += 1.0;
+		mins = 0.0;
+	} else {
+		mins = mins.round();
+	}
 	format!("{:.0}h{:02.0}m", hrs.floor(), mins)
 }
 
@@ -282,7 +288,7 @@ fn initialise(
 }
 
 fn create_full_text(symbol: String, fraction: f32, remaining: &str) -> String {
-	format!("{}{:.0}% ({})", symbol, fraction * 100.0, remaining)
+	format!("{} {:.0}% ({})", symbol, fraction * 100.0, remaining)
 }
 
 #[cfg(test)]
@@ -291,8 +297,14 @@ mod test {
 
 	#[test]
 	fn minutes_to_string_works() {
+		env_logger::init();
 		assert_eq!(minutes_to_string(302.2), "5h02m");
 		assert_eq!(minutes_to_string(302.7), "5h03m");
+		assert_eq!(minutes_to_string(60.0), "1h00m");
+		assert_eq!(minutes_to_string(59.99), "1h00m");
+		assert_eq!(minutes_to_string(60.5), "1h01m");
+		assert_eq!(minutes_to_string(60.4999), "1h00m");
+		assert_eq!(minutes_to_string(39.5), "0h40m");
 	}
 
 	#[test]
